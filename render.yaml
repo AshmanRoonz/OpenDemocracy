@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: opendemocracy
+    runtime: python
+    buildCommand: pip install .[web]
+    startCommand: python -m opendemocracy.web --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
