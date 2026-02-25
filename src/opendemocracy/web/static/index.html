@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenDemocracy</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3345;
+    --text: #e4e6f0;
+    --text2: #9196ab;
+    --accent: #6c8cff;
+    --accent2: #4a6adf;
+    --green: #4caf87;
+    --red: #e05555;
+    --orange: #e0993a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 1.3rem; font-weight: 600; }
+  header h1 span { color: var(--accent); }
+  .stats {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--text2);
+  }
+  .stats strong { color: var(--accent); }
+
+  /* Layout */
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+  section { margin-bottom: 2rem; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+  .card p {
+    color: var(--text2);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Status banner */
+  .status-banner {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .status-banner .label {
+    font-size: 0.85rem;
+    color: var(--text2);
+  }
+  .status-banner .value {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .status-enrolled { color: var(--green); }
+  .status-not-enrolled { color: var(--orange); }
+
+  /* Buttons */
+  button, .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--accent2); }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  button.secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  button.secondary:hover { background: var(--border); }
+
+  /* Biometric factors */
+  .factors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .factor-btn {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text2);
+  }
+  .factor-btn:hover { border-color: var(--accent); color: var(--text); }
+  .factor-btn.selected {
+    border-color: var(--accent);
+    background: rgba(108, 140, 255, 0.1);
+    color: var(--text);
+  }
+  .factor-btn .icon { font-size: 1.8rem; margin-bottom: 0.3rem; }
+  .factor-btn .name { font-size: 0.85rem; font-weight: 500; }
+
+  /* Forms */
+  textarea, select, input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+  }
+  textarea:focus, select:focus, input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 0.4rem;
+  }
+  .form-group { margin-bottom: 1rem; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .tab {
+    padding: 0.5rem 1rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* Submissions list */
+  .submission-item {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .submission-item .type-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+    text-transform: uppercase;
+  }
+  .type-opinion { background: rgba(108,140,255,0.2); color: var(--accent); }
+  .type-idea { background: rgba(224,153,58,0.2); color: var(--orange); }
+  .type-vote { background: rgba(76,175,135,0.2); color: var(--green); }
+
+  /* Alert */
+  .alert {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .alert.success { background: rgba(76,175,135,0.15); color: var(--green); display: block; }
+  .alert.error { background: rgba(224,85,85,0.15); color: var(--red); display: block; }
+
+  /* Progress bar for enrollment */
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* Topic selector */
+  .topic-card {
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .topic-card:hover { border-color: var(--accent); }
+  .topic-card.selected { border-color: var(--accent); background: rgba(108,140,255,0.05); }
+  .topic-title { font-weight: 600; margin-bottom: 0.3rem; }
+
+  .hidden { display: none; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text2);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Open</span>Democracy</h1>
+  <div class="stats">
+    <span>Participants: <strong id="stat-enrolled">0</strong></span>
+    <span>Submissions: <strong id="stat-submissions">0</strong></span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Identity Status -->
+  <div class="status-banner" id="identity-status">
+    <div>
+      <div class="label">Identity Status</div>
+      <div class="value status-not-enrolled" id="identity-text">Not enrolled</div>
+    </div>
+    <button id="enroll-toggle-btn" onclick="toggleEnroll()">Enroll Now</button>
+  </div>
+
+  <!-- Alert -->
+  <div class="alert" id="alert"></div>
+
+  <!-- Enrollment Section -->
+  <section id="enroll-section" class="hidden">
+    <div class="card">
+      <h2>Biometric Enrollment</h2>
+      <p>Select at least 2 biometric factors. Your biometric data stays on your
+         device — only a cryptographic key is registered with the server.</p>
+
+      <div class="progress-bar"><div class="fill" id="enroll-progress" style="width:0%"></div></div>
+
+      <div class="factors">
+        <div class="factor-btn" data-factor="fingerprint" onclick="toggleFactor(this)">
+          <div class="icon">&#9757;</div>
+          <div class="name">Fingerprint</div>
+        </div>
+        <div class="factor-btn" data-factor="face" onclick="toggleFactor(this)">
+          <div class="icon">&#128100;</div>
+          <div class="name">Face</div>
+        </div>
+        <div class="factor-btn" data-factor="iris" onclick="toggleFactor(this)">
+          <div class="icon">&#128065;</div>
+          <div class="name">Iris</div>
+        </div>
+        <div class="factor-btn" data-factor="voice" onclick="toggleFactor(this)">
+          <div class="icon">&#127908;</div>
+          <div class="name">Voice</div>
+        </div>
+      </div>
+
+      <button id="enroll-btn" onclick="enroll()" disabled>
+        Enroll with selected factors
+      </button>
+    </div>
+  </section>
+
+  <!-- Topics Section -->
+  <section id="topics-section">
+    <h2 style="margin-bottom:1rem;">Open Topics</h2>
+    <div id="topics-list"></div>
+  </section>
+
+  <!-- Submit Section (appears when topic is selected) -->
+  <section id="submit-section" class="hidden">
+    <div class="card">
+      <h2 id="submit-topic-title"></h2>
+      <p id="submit-topic-desc"></p>
+
+      <div class="tabs" id="submit-tabs"></div>
+
+      <!-- Opinion form -->
+      <div id="form-opinion" class="hidden">
+        <div class="form-group">
+          <label for="opinion-text">Your opinion</label>
+          <textarea id="opinion-text" rows="4" placeholder="Share your perspective..."></textarea>
+        </div>
+        <button onclick="submitEntry('opinion')">Submit Opinion</button>
+      </div>
+
+      <!-- Idea form -->
+      <div id="form-idea" class="hidden">
+        <div class="form-group">
+          <label for="idea-text">Your idea</label>
+          <textarea id="idea-text" rows="4" placeholder="Describe your proposal..."></textarea>
+        </div>
+        <button onclick="submitEntry('idea')">Submit Idea</button>
+      </div>
+
+      <!-- Vote form -->
+      <div id="form-vote" class="hidden">
+        <div class="form-group">
+          <label for="vote-select">Cast your vote</label>
+          <select id="vote-select"></select>
+        </div>
+        <button onclick="submitEntry('vote')">Cast Vote</button>
+      </div>
+    </div>
+
+    <!-- Submissions for this topic -->
+    <div class="card">
+      <h2>Community Submissions</h2>
+      <div id="submissions-list">
+        <p style="color:var(--text2); font-size:0.9rem;">No submissions yet.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  OpenDemocracy &mdash; One person, one voice. Biometric data never leaves your device.
+</footer>
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let identity = JSON.parse(localStorage.getItem("od_identity") || "null");
+let selectedFactors = [];
+let currentTopic = null;
+let currentTab = "opinion";
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  updateIdentityUI();
+  loadTopics();
+  loadStats();
+});
+
+// ---------------------------------------------------------------------------
+// Identity UI
+// ---------------------------------------------------------------------------
+function updateIdentityUI() {
+  const text = document.getElementById("identity-text");
+  const btn = document.getElementById("enroll-toggle-btn");
+  if (identity) {
+    text.textContent = `Enrolled (${identity.factors_enrolled.join(", ")})`;
+    text.className = "value status-enrolled";
+    btn.textContent = "Enrolled";
+    btn.disabled = true;
+    btn.className = "btn secondary";
+    document.getElementById("enroll-section").classList.add("hidden");
+  } else {
+    text.textContent = "Not enrolled";
+    text.className = "value status-not-enrolled";
+    btn.textContent = "Enroll Now";
+    btn.disabled = false;
+  }
+}
+
+function toggleEnroll() {
+  document.getElementById("enroll-section").classList.toggle("hidden");
+}
+
+// ---------------------------------------------------------------------------
+// Factor selection
+// ---------------------------------------------------------------------------
+function toggleFactor(el) {
+  const factor = el.dataset.factor;
+  el.classList.toggle("selected");
+  if (el.classList.contains("selected")) {
+    selectedFactors.push(factor);
+  } else {
+    selectedFactors = selectedFactors.filter(f => f !== factor);
+  }
+  const pct = Math.min((selectedFactors.length / 2) * 100, 100);
+  document.getElementById("enroll-progress").style.width = pct + "%";
+  document.getElementById("enroll-btn").disabled = selectedFactors.length < 2;
+}
+
+// ---------------------------------------------------------------------------
+// Enrollment
+// ---------------------------------------------------------------------------
+async function enroll() {
+  const btn = document.getElementById("enroll-btn");
+  btn.disabled = true;
+  btn.textContent = "Scanning biometrics...";
+
+  // Simulate biometric capture delay
+  await sleep(1500);
+  btn.textContent = "Generating keys...";
+  await sleep(800);
+
+  try {
+    const res = await fetch("/api/enroll", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ factors: selectedFactors }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showAlert(data.detail || "Enrollment failed", "error");
+      btn.disabled = false;
+      btn.textContent = "Enroll with selected factors";
+      return;
+    }
+
+    // Store identity locally (in production: Secure Enclave / Keystore)
+    identity = {
+      anonymous_id: data.anonymous_id,
+      public_key: data.public_key,
+      private_key: data.private_key,
+      factors_enrolled: data.factors_enrolled,
+    };
+    localStorage.setItem("od_identity", JSON.stringify(identity));
+    updateIdentityUI();
+    loadStats();
+    showAlert("Enrollment successful. Your biometric key is stored locally.", "success");
+  } catch (err) {
+    showAlert("Network error: " + err.message, "error");
+    btn.disabled = false;
+    btn.textContent = "Enroll with selected factors";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Topics
+// ---------------------------------------------------------------------------
+async function loadTopics() {
+  try {
+    const res = await fetch("/api/topics");
+    const topics = await res.json();
+    const container = document.getElementById("topics-list");
+    if (topics.length === 0) {
+      container.innerHTML = '<p style="color:var(--text2)">No open topics.</p>';
+      return;
+    }
+    container.innerHTML = topics.map(t => `
+      <div class="card topic-card" onclick="selectTopic('${t.id}')">
+        <div class="topic-title">${esc(t.title)}</div>
+        <p>${esc(t.description)}</p>
+      </div>
+    `).join("");
+  } catch (err) {
+    console.error("Failed to load topics:", err);
+  }
+}
+
+function selectTopic(topicId) {
+  // Fetch topic details
+  fetch("/api/topics").then(r => r.json()).then(topics => {
+    const topic = topics.find(t => t.id === topicId);
+    if (!topic) return;
+    currentTopic = topic;
+
+    // Highlight selected
+    document.querySelectorAll(".topic-card").forEach(el => {
+      el.classList.toggle("selected", el.onclick.toString().includes(topicId));
+    });
+
+    // Show submit section
+    const sec = document.getElementById("submit-section");
+    sec.classList.remove("hidden");
+    document.getElementById("submit-topic-title").textContent = topic.title;
+    document.getElementById("submit-topic-desc").textContent = topic.description;
+
+    // Build tabs
+    const tabs = [];
+    if (topic.allow_opinions) tabs.push("opinion");
+    if (topic.allow_ideas) tabs.push("idea");
+    if (topic.allow_votes) tabs.push("vote");
+    const tabContainer = document.getElementById("submit-tabs");
+    tabContainer.innerHTML = tabs.map(t =>
+      `<div class="tab" onclick="switchTab('${t}')">${t.charAt(0).toUpperCase() + t.slice(1)}</div>`
+    ).join("");
+    if (tabs.length > 0) switchTab(tabs[0]);
+
+    // Populate vote options
+    if (topic.vote_options.length > 0) {
+      const sel = document.getElementById("vote-select");
+      sel.innerHTML = topic.vote_options.map(o =>
+        `<option value="${esc(o)}">${esc(o)}</option>`
+      ).join("");
+    }
+
+    loadSubmissions(topicId);
+  });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".tab").forEach(el => {
+    el.classList.toggle("active", el.textContent.toLowerCase() === tab);
+  });
+  document.getElementById("form-opinion").classList.toggle("hidden", tab !== "opinion");
+  document.getElementById("form-idea").classList.toggle("hidden", tab !== "idea");
+  document.getElementById("form-vote").classList.toggle("hidden", tab !== "vote");
+}
+
+// ---------------------------------------------------------------------------
+// Submissions
+// ---------------------------------------------------------------------------
+async function submitEntry(type) {
+  if (!identity) {
+    showAlert("You must enroll with biometrics before submitting.", "error");
+    return;
+  }
+  if (!currentTopic) return;
+
+  let content = "";
+  if (type === "opinion") content = document.getElementById("opinion-text").value.trim();
+  else if (type === "idea") content = document.getElementById("idea-text").value.trim();
+  else if (type === "vote") content = document.getElementById("vote-select").value;
+
+  if (!content) {
+    showAlert("Please enter your " + type + " before submitting.", "error");
+    return;
+  }
+
+  try {
+    // Step 1: Get challenge
+    const chRes = await fetch("/api/challenge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anonymous_id: identity.anonymous_id }),
+    });
+    if (!chRes.ok) {
+      const err = await chRes.json();
+      showAlert(err.detail || "Failed to get challenge", "error");
+      return;
+    }
+    const challenge = await chRes.json();
+
+    // Step 2: Sign challenge locally (simulates on-device biometric auth + signing)
+    const signature = await hmacSign(identity.public_key, challenge.nonce);
+
+    // Step 3: Submit with proof
+    const subRes = await fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        anonymous_id: identity.anonymous_id,
+        challenge_id: challenge.challenge_id,
+        signature: signature,
+        topic_id: currentTopic.id,
+        submission_type: type,
+        content: content,
+      }),
+    });
+    const subData = await subRes.json();
+    if (!subRes.ok) {
+      showAlert(subData.detail || "Submission failed", "error");
+      return;
+    }
+
+    showAlert(subData.message, "success");
+    // Clear form
+    if (type === "opinion") document.getElementById("opinion-text").value = "";
+    if (type === "idea") document.getElementById("idea-text").value = "";
+
+    loadSubmissions(currentTopic.id);
+    loadStats();
+  } catch (err) {
+    showAlert("Error: " + err.message, "error");
+  }
+}
+
+async function loadSubmissions(topicId) {
+  try {
+    const res = await fetch(`/api/topics/${topicId}/submissions`);
+    const subs = await res.json();
+    const container = document.getElementById("submissions-list");
+    if (subs.length === 0) {
+      container.innerHTML = '<p style="color:var(--text2); font-size:0.9rem;">No submissions yet. Be the first.</p>';
+      return;
+    }
+    container.innerHTML = subs.map(s => `
+      <div class="submission-item">
+        <span class="type-badge type-${s.submission_type}">${s.submission_type}</span>
+        ${esc(s.content)}
+      </div>
+    `).join("");
+  } catch (err) {
+    console.error("Failed to load submissions:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Stats
+// ---------------------------------------------------------------------------
+async function loadStats() {
+  try {
+    const res = await fetch("/api/stats");
+    const data = await res.json();
+    document.getElementById("stat-enrolled").textContent = data.enrolled_participants;
+    document.getElementById("stat-submissions").textContent = data.total_submissions;
+  } catch (err) {
+    console.error("Failed to load stats:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Crypto (HMAC-SHA256 in browser using Web Crypto API)
+// ---------------------------------------------------------------------------
+async function hmacSign(key, message) {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(key),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(message));
+  return Array.from(new Uint8Array(sig))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function showAlert(msg, type) {
+  const el = document.getElementById("alert");
+  el.textContent = msg;
+  el.className = "alert " + type;
+  setTimeout(() => { el.className = "alert"; }, 5000);
+}
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+</script>
+
+</body>
+</html>
