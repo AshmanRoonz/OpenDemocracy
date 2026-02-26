@@ -236,6 +236,144 @@
   .net-log .ok { color: var(--green); }
   .net-log .warn { color: var(--orange); }
   .net-log .err { color: var(--red); }
+
+  /* ---- Analysis panel ---- */
+  .analysis-panel {
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .analysis-panel h2 {
+    font-size: 1.15rem;
+    margin-bottom: 0.3rem;
+    color: var(--accent);
+  }
+  .analysis-panel .subtitle {
+    font-size: 0.82rem;
+    color: var(--text2);
+    margin-bottom: 1.25rem;
+  }
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  @media (max-width: 600px) { .analysis-grid { grid-template-columns: 1fr; } }
+  .analysis-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .analysis-box h3 {
+    font-size: 0.85rem;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.6rem;
+  }
+  /* Horizontal bar chart rows */
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.82rem;
+  }
+  .bar-label {
+    min-width: 70px;
+    text-align: right;
+    color: var(--text2);
+    flex-shrink: 0;
+  }
+  .bar-track {
+    flex: 1;
+    height: 14px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+  .bar-fill.support { background: var(--green); }
+  .bar-fill.oppose { background: var(--red); }
+  .bar-fill.neutral { background: var(--orange); }
+  .bar-fill.urgency { background: #e06090; }
+  .bar-fill.certainty { background: var(--accent); }
+  .bar-value {
+    min-width: 36px;
+    text-align: left;
+    color: var(--text);
+    font-weight: 500;
+  }
+  /* Cluster cards */
+  .cluster-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.6rem;
+  }
+  .cluster-card h4 {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  .cluster-card .cluster-size {
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-bottom: 0.4rem;
+  }
+  .cluster-card .cluster-rep {
+    font-size: 0.82rem;
+    color: var(--text2);
+    font-style: italic;
+    border-left: 2px solid var(--border);
+    padding-left: 0.6rem;
+    margin-top: 0.35rem;
+  }
+  /* Bias warnings */
+  .bias-warning {
+    background: rgba(224,85,85,0.08);
+    border: 1px solid rgba(224,85,85,0.3);
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.82rem;
+    color: var(--red);
+    margin-bottom: 0.4rem;
+  }
+  /* Consensus meter */
+  .consensus-meter {
+    display: flex;
+    height: 22px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.6rem;
+  }
+  .consensus-meter .seg {
+    transition: width 0.5s ease;
+    min-width: 2px;
+  }
+  .consensus-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-bottom: 0.6rem;
+  }
+  .analysis-empty {
+    text-align: center;
+    color: var(--text2);
+    font-size: 0.88rem;
+    padding: 1.5rem;
+  }
 </style>
 </head>
 <body>
@@ -462,6 +600,25 @@
         <p style="color:var(--text2); font-size:0.85rem;">
           No submissions yet. Be the first to participate.
         </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- COLLECTIVE INTELLIGENCE PANEL                                  -->
+  <!-- ============================================================== -->
+  <section id="sec-analysis" class="hidden">
+    <div class="analysis-panel">
+      <h2>Collective Intelligence</h2>
+      <p class="subtitle">
+        Real-time AI analysis running locally in every browser. No server.
+        All processing is transparent and auditable.
+      </p>
+
+      <div id="analysis-content">
+        <div class="analysis-empty">
+          Waiting for submissions. Analysis begins automatically as opinions arrive.
+        </div>
       </div>
     </div>
   </section>
@@ -1333,6 +1490,7 @@ async function showRoomUI() {
   document.getElementById("sec-enroll").classList.remove("hidden");
   document.getElementById("sec-create-topic").classList.remove("hidden");
   document.getElementById("sec-topics").classList.remove("hidden");
+  document.getElementById("sec-analysis").classList.remove("hidden");
   document.getElementById("sec-privacy").style.display = "";
 
   // If already enrolled from a previous session, restore identity
@@ -1397,7 +1555,10 @@ function pickFactor(el) {
 
 function refreshAll() {
   renderTopics();
-  if (currentTopic) renderSubmissions(currentTopic.id);
+  if (currentTopic) {
+    renderSubmissions(currentTopic.id);
+    runAnalysis(currentTopic.id);
+  }
   updateStats();
 }
 
@@ -1540,6 +1701,377 @@ function esc(s) {
 }
 
 function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ==================================================================
+   IN-BROWSER COLLECTIVE INTELLIGENCE ENGINE
+   ==================================================================
+   Ports the server-side Python processing pipeline to pure JS:
+   - Multi-dimensional sentiment scoring (lexicon-based)
+   - K-Means opinion clustering on sentiment feature vectors
+   - Consensus/distribution analysis
+   - Bias detection (duplicate content, temporal burst, sample size)
+   - Vote tally with distribution breakdown
+
+   Everything runs locally. No server calls. Every peer independently
+   computes the same analysis from the same replicated data, which means
+   every browser can independently verify the results.
+   ================================================================== */
+
+/* ---- Sentiment lexicons (mirrors processing/sentiment.py) ---- */
+const LEX_SUPPORT = new Set([
+  "support","favor","agree","benefit","good","positive","help",
+  "advantage","pro","should","need","must","important","essential",
+  "necessary","great","works","effective","promising","yes","definitely",
+]);
+const LEX_OPPOSE = new Set([
+  "oppose","against","disagree","harmful","bad","negative","hurt",
+  "disadvantage","con","shouldn't","terrible","fail","waste",
+  "dangerous","risk","problem","worse","costly","ineffective","no",
+]);
+const LEX_URGENCY = new Set([
+  "now","immediately","urgent","crisis","emergency","asap",
+  "critical","desperate","overdue","finally","enough",
+]);
+const LEX_CERTAINTY = new Set([
+  "definitely","certainly","clearly","obviously","proven",
+  "evidence","fact","data","research","study","shows",
+]);
+const LEX_UNCERTAINTY = new Set([
+  "maybe","perhaps","might","possibly","unclear","uncertain",
+  "debatable","depends","unsure","questionable",
+]);
+
+function tokenize(text) {
+  return text.toLowerCase().replace(/[^a-z0-9' ]/g, " ").split(/\s+/).filter(Boolean);
+}
+
+function wordRatio(words, lexicon) {
+  if (!words.length) return 0;
+  let hits = 0;
+  for (const w of words) if (lexicon.has(w)) hits++;
+  return hits / words.length;
+}
+
+function scoreSentiment(text) {
+  const words = tokenize(text);
+  const support = wordRatio(words, LEX_SUPPORT);
+  const oppose = wordRatio(words, LEX_OPPOSE);
+  const stance = support - oppose; // [-1, 1]
+  const urgency = Math.min(wordRatio(words, LEX_URGENCY) * 5, 1.0);
+  const certaintyPos = wordRatio(words, LEX_CERTAINTY);
+  const certaintyNeg = wordRatio(words, LEX_UNCERTAINTY);
+  const certainty = Math.tanh((certaintyPos - certaintyNeg) * 5);
+
+  // Intensity proxy
+  const excl = (text.match(/!/g) || []).length;
+  const capsRatio = [...text].filter(c => c >= "A" && c <= "Z").length / Math.max(text.length, 1);
+  const intensity = Math.min((excl * 0.15 + capsRatio) * 2, 1.0);
+
+  return { stance, urgency, certainty, intensity };
+}
+
+/* ---- K-Means clustering (pure JS, no deps) ---- */
+
+function kmeans(vectors, k, maxIter = 50) {
+  const n = vectors.length;
+  const dim = vectors[0].length;
+  if (n <= k) {
+    // Fewer points than clusters — each point is its own cluster
+    return vectors.map((_, i) => i);
+  }
+
+  // Initialize centroids via k-means++ seeding
+  const centroids = [vectors[Math.floor(Math.random() * n)].slice()];
+  while (centroids.length < k) {
+    const dists = vectors.map(v => {
+      let minD = Infinity;
+      for (const c of centroids) {
+        let d = 0;
+        for (let i = 0; i < dim; i++) d += (v[i] - c[i]) ** 2;
+        minD = Math.min(minD, d);
+      }
+      return minD;
+    });
+    const total = dists.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < n; i++) {
+      r -= dists[i];
+      if (r <= 0) { centroids.push(vectors[i].slice()); break; }
+    }
+    if (centroids.length === k - 1 + 1) break; // safety
+  }
+  // Pad if needed
+  while (centroids.length < k) centroids.push(vectors[Math.floor(Math.random() * n)].slice());
+
+  const labels = new Array(n).fill(0);
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    let changed = false;
+
+    // Assign
+    for (let i = 0; i < n; i++) {
+      let bestK = 0, bestD = Infinity;
+      for (let c = 0; c < k; c++) {
+        let d = 0;
+        for (let j = 0; j < dim; j++) d += (vectors[i][j] - centroids[c][j]) ** 2;
+        if (d < bestD) { bestD = d; bestK = c; }
+      }
+      if (labels[i] !== bestK) { labels[i] = bestK; changed = true; }
+    }
+
+    if (!changed) break;
+
+    // Update centroids
+    const sums = Array.from({ length: k }, () => new Array(dim).fill(0));
+    const counts = new Array(k).fill(0);
+    for (let i = 0; i < n; i++) {
+      counts[labels[i]]++;
+      for (let j = 0; j < dim; j++) sums[labels[i]][j] += vectors[i][j];
+    }
+    for (let c = 0; c < k; c++) {
+      if (counts[c] === 0) continue;
+      for (let j = 0; j < dim; j++) centroids[c][j] = sums[c][j] / counts[c];
+    }
+  }
+
+  return labels;
+}
+
+/* ---- Bias detection (mirrors processing/bias.py) ---- */
+
+function detectBias(submissions) {
+  const warnings = [];
+  if (submissions.length > 0 && submissions.length < 5) {
+    warnings.push("Very small sample (" + submissions.length + " submissions). Results may not be representative.");
+  }
+
+  // Duplicate content
+  const textCounts = {};
+  for (const s of submissions) {
+    const t = s.content.trim().toLowerCase();
+    textCounts[t] = (textCounts[t] || 0) + 1;
+  }
+  const dupes = Object.values(textCounts).reduce((sum, c) => sum + Math.max(c - 1, 0), 0);
+  if (submissions.length > 3 && dupes / submissions.length > 0.15) {
+    warnings.push("Duplicate content detected: " + dupes + " duplicates (" + Math.round(dupes / submissions.length * 100) + "%). Possible coordinated campaign.");
+  }
+
+  // Temporal clustering (brigading)
+  if (submissions.length >= 10) {
+    const times = submissions.map(s => new Date(s.submitted_at).getTime()).sort((a, b) => a - b);
+    const span = times[times.length - 1] - times[0];
+    if (span === 0) {
+      warnings.push("All submissions have identical timestamps. Possible data import artifact.");
+    } else if (span > 0) {
+      const windowSize = Math.max(Math.floor(submissions.length * 0.1), 1);
+      for (let i = 0; i <= times.length - windowSize; i++) {
+        const windowSpan = times[i + windowSize - 1] - times[i];
+        if (windowSpan < span * 0.05 && windowSize > submissions.length * 0.5) {
+          warnings.push("Temporal burst detected: large cluster of submissions in a very short window. Possible brigading.");
+          break;
+        }
+      }
+    }
+  }
+
+  // Single participant dominance
+  const authorCounts = {};
+  for (const s of submissions) {
+    authorCounts[s.anonymous_id] = (authorCounts[s.anonymous_id] || 0) + 1;
+  }
+  const maxByOne = Math.max(...Object.values(authorCounts));
+  if (submissions.length > 5 && maxByOne / submissions.length > 0.5) {
+    warnings.push("One participant accounts for " + Math.round(maxByOne / submissions.length * 100) + "% of submissions. Limited diversity of voice.");
+  }
+
+  return warnings;
+}
+
+/* ---- Cluster labeling heuristic ---- */
+
+function labelCluster(members) {
+  // Use the dominant stance to name the cluster
+  let supportCount = 0, opposeCount = 0, neutralCount = 0;
+  for (const m of members) {
+    if (m.scores.stance > 0.03) supportCount++;
+    else if (m.scores.stance < -0.03) opposeCount++;
+    else neutralCount++;
+  }
+  const total = members.length;
+  if (supportCount > opposeCount && supportCount > neutralCount) {
+    return "Supportive voices (" + Math.round(supportCount / total * 100) + "%)";
+  }
+  if (opposeCount > supportCount && opposeCount > neutralCount) {
+    return "Critical voices (" + Math.round(opposeCount / total * 100) + "%)";
+  }
+  return "Nuanced / mixed (" + Math.round(neutralCount / total * 100) + "%)";
+}
+
+/* ---- Main analysis runner ---- */
+
+function runAnalysis(topicId) {
+  const el = document.getElementById("analysis-content");
+  if (!topicId) {
+    el.innerHTML = '<div class="analysis-empty">Select a topic to see collective intelligence analysis.</div>';
+    return;
+  }
+
+  const allSubs = [...state.submissions.values()].filter(s => s.topic_id === topicId);
+  if (!allSubs.length) {
+    el.innerHTML = '<div class="analysis-empty">No submissions yet. Analysis begins automatically as opinions arrive.</div>';
+    return;
+  }
+
+  const opinions = allSubs.filter(s => s.submission_type === "opinion" || s.submission_type === "idea");
+  const votes = allSubs.filter(s => s.submission_type === "vote");
+  const topic = state.topics.get(topicId);
+
+  // Score all opinions
+  const scored = opinions.map(s => ({
+    ...s,
+    scores: scoreSentiment(s.content),
+  }));
+
+  // Aggregate sentiment
+  const aggStance = scored.length ? scored.reduce((sum, s) => sum + s.scores.stance, 0) / scored.length : 0;
+  const aggUrgency = scored.length ? scored.reduce((sum, s) => sum + s.scores.urgency, 0) / scored.length : 0;
+  const aggCertainty = scored.length ? scored.reduce((sum, s) => sum + s.scores.certainty, 0) / scored.length : 0;
+
+  // Stance distribution
+  let supportPct = 0, opposePct = 0, neutralPct = 0;
+  if (scored.length) {
+    const sup = scored.filter(s => s.scores.stance > 0.03).length;
+    const opp = scored.filter(s => s.scores.stance < -0.03).length;
+    const neu = scored.length - sup - opp;
+    supportPct = Math.round(sup / scored.length * 100);
+    opposePct = Math.round(opp / scored.length * 100);
+    neutralPct = 100 - supportPct - opposePct;
+  }
+
+  // Cluster opinions
+  let clusterHTML = "";
+  if (scored.length >= 3) {
+    const k = Math.min(Math.max(2, Math.floor(scored.length / 3)), 5);
+    const vectors = scored.map(s => [s.scores.stance, s.scores.urgency, s.scores.certainty, s.scores.intensity]);
+    const labels = kmeans(vectors, k);
+
+    const clusters = {};
+    for (let i = 0; i < scored.length; i++) {
+      const cid = labels[i];
+      if (!clusters[cid]) clusters[cid] = [];
+      clusters[cid].push(scored[i]);
+    }
+
+    const clusterEntries = Object.entries(clusters).sort((a, b) => b[1].length - a[1].length);
+    clusterHTML = clusterEntries.map(([cid, members]) => {
+      const label = labelCluster(members);
+      const rep = members.sort((a, b) => b.content.length - a.content.length)[0];
+      const repText = rep.content.length > 150 ? rep.content.slice(0, 150) + "..." : rep.content;
+      return '<div class="cluster-card">' +
+        '<h4>' + esc(label) + '</h4>' +
+        '<div class="cluster-size">' + members.length + ' of ' + scored.length + ' opinions</div>' +
+        '<div class="cluster-rep">"' + esc(repText) + '"</div>' +
+        '</div>';
+    }).join("");
+  } else if (scored.length > 0) {
+    clusterHTML = '<div style="color:var(--text2); font-size:0.82rem;">Need at least 3 opinions for clustering. Currently: ' + scored.length + '.</div>';
+  }
+
+  // Vote tally
+  let voteHTML = "";
+  if (votes.length > 0 && topic && topic.vote_options && topic.vote_options.length) {
+    const tally = {};
+    for (const opt of topic.vote_options) tally[opt] = 0;
+    for (const v of votes) {
+      if (tally[v.content] !== undefined) tally[v.content]++;
+      else tally[v.content] = (tally[v.content] || 0) + 1;
+    }
+    const maxVotes = Math.max(...Object.values(tally), 1);
+    voteHTML = Object.entries(tally).map(([opt, count]) => {
+      const pct = Math.round(count / votes.length * 100);
+      return '<div class="bar-row">' +
+        '<span class="bar-label">' + esc(opt) + '</span>' +
+        '<span class="bar-track"><span class="bar-fill support" style="width:' + (count / maxVotes * 100) + '%"></span></span>' +
+        '<span class="bar-value">' + count + ' (' + pct + '%)</span>' +
+        '</div>';
+    }).join("");
+  }
+
+  // Bias warnings
+  const biasWarnings = detectBias(allSubs);
+  const biasHTML = biasWarnings.map(w =>
+    '<div class="bias-warning">' + esc(w) + '</div>'
+  ).join("");
+
+  // Build the full panel
+  let html = '<div class="analysis-grid">';
+
+  // Box 1: Stance distribution
+  html += '<div class="analysis-box">';
+  html += '<h3>Stance Distribution</h3>';
+  html += '<div class="consensus-meter">';
+  html += '<div class="seg" style="width:' + supportPct + '%; background:var(--green);"></div>';
+  html += '<div class="seg" style="width:' + neutralPct + '%; background:var(--orange);"></div>';
+  html += '<div class="seg" style="width:' + opposePct + '%; background:var(--red);"></div>';
+  html += '</div>';
+  html += '<div class="consensus-label"><span>Support ' + supportPct + '%</span><span>Mixed ' + neutralPct + '%</span><span>Oppose ' + opposePct + '%</span></div>';
+  html += '<div style="font-size:0.8rem; color:var(--text2);">' + scored.length + ' opinions analyzed</div>';
+  html += '</div>';
+
+  // Box 2: Sentiment dimensions
+  html += '<div class="analysis-box">';
+  html += '<h3>Sentiment Dimensions</h3>';
+  // Stance bar (centered around 0)
+  const stancePct = Math.round((aggStance + 1) / 2 * 100);
+  html += '<div class="bar-row"><span class="bar-label">Stance</span>';
+  html += '<span class="bar-track"><span class="bar-fill ' + (aggStance >= 0 ? "support" : "oppose") + '" style="width:' + stancePct + '%"></span></span>';
+  html += '<span class="bar-value">' + (aggStance >= 0 ? "+" : "") + aggStance.toFixed(2) + '</span></div>';
+  // Urgency
+  const urgPct = Math.round(aggUrgency * 100);
+  html += '<div class="bar-row"><span class="bar-label">Urgency</span>';
+  html += '<span class="bar-track"><span class="bar-fill urgency" style="width:' + urgPct + '%"></span></span>';
+  html += '<span class="bar-value">' + urgPct + '%</span></div>';
+  // Certainty
+  const certPct = Math.round((aggCertainty + 1) / 2 * 100);
+  html += '<div class="bar-row"><span class="bar-label">Certainty</span>';
+  html += '<span class="bar-track"><span class="bar-fill certainty" style="width:' + certPct + '%"></span></span>';
+  html += '<span class="bar-value">' + aggCertainty.toFixed(2) + '</span></div>';
+  html += '</div>';
+
+  html += '</div>'; // end analysis-grid
+
+  // Vote results (if any)
+  if (voteHTML) {
+    html += '<div class="analysis-box" style="margin-bottom:1rem;">';
+    html += '<h3>Vote Results (' + votes.length + ' votes)</h3>';
+    html += voteHTML;
+    html += '</div>';
+  }
+
+  // Opinion clusters
+  if (clusterHTML) {
+    html += '<div style="margin-bottom:1rem;">';
+    html += '<h3 style="font-size:0.85rem; color:var(--text2); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.6rem;">Opinion Clusters</h3>';
+    html += clusterHTML;
+    html += '</div>';
+  }
+
+  // Bias warnings
+  if (biasHTML) {
+    html += '<div style="margin-bottom:0.5rem;">';
+    html += '<h3 style="font-size:0.85rem; color:var(--text2); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.6rem;">Data Quality Alerts</h3>';
+    html += biasHTML;
+    html += '</div>';
+  }
+
+  // Methodology note
+  html += '<div style="font-size:0.75rem; color:var(--text2); margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">';
+  html += 'Analysis runs locally in your browser using lexicon-based sentiment scoring and K-Means clustering on sentiment feature vectors. ';
+  html += 'All peers compute the same results independently from the same replicated data. No external AI service is contacted.';
+  html += '</div>';
+
+  el.innerHTML = html;
+}
 
 /* ==================================================================
    BOOT — open IndexedDB, rehydrate state, then check for auto-join
