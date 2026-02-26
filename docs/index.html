@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenDemocracy — Peer-to-Peer</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3345;
+    --text: #e4e6f0;
+    --text2: #9196ab;
+    --accent: #6c8cff;
+    --accent2: #4a6adf;
+    --green: #4caf87;
+    --green2: #3a9070;
+    --red: #e05555;
+    --orange: #e0993a;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ---- Header ---- */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.8rem 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    flex-wrap: wrap; gap: 0.5rem;
+  }
+  .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+  .logo span { color: var(--accent); }
+  .logo small { font-size: 0.7rem; font-weight: 400; color: var(--green); margin-left: 0.5rem; letter-spacing: 0.02em; }
+  .header-stats { display: flex; gap: 1.5rem; font-size: 0.8rem; color: var(--text2); }
+  .header-stats strong { color: var(--accent); font-weight: 600; }
+
+  /* ---- Layout ---- */
+  .container { max-width: 880px; margin: 0 auto; padding: 0 1.5rem; }
+  section { margin-bottom: 2.5rem; }
+
+  /* ---- Hero ---- */
+  .hero { text-align: center; padding: 3rem 1rem 2rem; }
+  .hero h2 {
+    font-size: 2rem; font-weight: 700; letter-spacing: -0.03em;
+    margin-bottom: 0.75rem; line-height: 1.2;
+  }
+  .hero h2 em { font-style: normal; color: var(--accent); }
+  .hero p { color: var(--text2); font-size: 1.05rem; max-width: 560px; margin: 0 auto 1.5rem; }
+
+  /* ---- Steps ---- */
+  .steps {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem; margin-bottom: 0.5rem;
+  }
+  .step {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem; text-align: center;
+  }
+  .step .num {
+    display: inline-block; width: 2rem; height: 2rem; line-height: 2rem;
+    background: var(--accent); color: #fff; border-radius: 50%;
+    font-size: 0.85rem; font-weight: 700; margin-bottom: 0.6rem;
+  }
+  .step h3 { font-size: 0.95rem; margin-bottom: 0.3rem; }
+  .step p { font-size: 0.8rem; color: var(--text2); margin: 0; }
+
+  /* ---- Cards ---- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem;
+  }
+  .card h2 { font-size: 1.1rem; margin-bottom: 0.4rem; }
+  .card p.desc { color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem; }
+
+  /* ---- Buttons ---- */
+  button {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; padding: 0.6rem 1.4rem;
+    font-size: 0.9rem; font-weight: 500; cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--accent2); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.green { background: var(--green); }
+  button.green:hover { background: var(--green2); }
+  button.secondary {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  }
+  button.secondary:hover { background: var(--border); }
+  button.full { width: 100%; }
+  button.small { padding: 0.35rem 0.8rem; font-size: 0.8rem; }
+
+  /* ---- Room banner ---- */
+  .room-banner {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .room-banner .room-id {
+    font-family: monospace; font-size: 1.1rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.03em;
+  }
+  .room-banner .room-meta { font-size: 0.82rem; color: var(--text2); margin-top: 0.3rem; }
+  .room-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+
+  /* ---- Peer indicator ---- */
+  .peer-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); margin-right: 4px; vertical-align: middle;
+  }
+  .peer-dot.off { background: var(--red); }
+
+  /* ---- Identity banner ---- */
+  .id-banner {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap;
+  }
+  .id-banner .meta { font-size: 0.85rem; color: var(--text2); }
+  .id-banner .status { font-weight: 600; font-size: 0.95rem; }
+  .enrolled { color: var(--green); }
+  .not-enrolled { color: var(--orange); }
+
+  /* ---- Biometric factors ---- */
+  .factors {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem; margin-bottom: 1.25rem;
+  }
+  @media (max-width: 500px) { .factors { grid-template-columns: repeat(2, 1fr); } }
+  .factor {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 10px; padding: 1rem 0.5rem;
+    text-align: center; cursor: pointer; transition: all 0.15s; user-select: none;
+  }
+  .factor:hover { border-color: var(--accent); color: var(--text); }
+  .factor.on {
+    border-color: var(--green); background: rgba(76, 175, 135, 0.08); color: var(--text);
+  }
+  .factor .ic { font-size: 2rem; margin-bottom: 0.2rem; }
+  .factor .nm { font-size: 0.8rem; font-weight: 500; color: var(--text2); }
+  .factor.on .nm { color: var(--green); }
+  .factor .check { display: none; font-size: 0.7rem; color: var(--green); }
+  .factor.on .check { display: block; }
+
+  /* ---- Progress bar ---- */
+  .prog { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; }
+  .prog .bar { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.4s ease; }
+
+  /* ---- Forms ---- */
+  textarea, select, input[type="text"] {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.7rem 1rem; color: var(--text);
+    font-size: 0.9rem; font-family: inherit; resize: vertical;
+  }
+  textarea:focus, select:focus, input:focus { outline: none; border-color: var(--accent); }
+  label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text2); margin-bottom: 0.35rem; }
+  .field { margin-bottom: 1rem; }
+
+  /* ---- Tabs ---- */
+  .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+  .tab {
+    padding: 0.45rem 1rem; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.8rem; cursor: pointer; color: var(--text2); transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ---- Submissions ---- */
+  .sub-item {
+    background: var(--surface2); border-radius: 8px;
+    padding: 0.7rem 1rem; margin-bottom: 0.5rem; font-size: 0.9rem;
+  }
+  .badge {
+    display: inline-block; font-size: 0.7rem; font-weight: 600;
+    padding: 0.12rem 0.45rem; border-radius: 4px; margin-right: 0.5rem;
+    text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .badge-opinion { background: rgba(108,140,255,0.2); color: var(--accent); }
+  .badge-idea { background: rgba(224,153,58,0.2); color: var(--orange); }
+  .badge-vote { background: rgba(76,175,135,0.2); color: var(--green); }
+
+  /* ---- Topic list ---- */
+  .topic { cursor: pointer; transition: border-color 0.15s; }
+  .topic:hover { border-color: var(--accent); }
+  .topic.on { border-color: var(--accent); background: rgba(108,140,255,0.04); }
+  .topic h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+  .topic p { margin: 0; }
+
+  /* ---- Alert ---- */
+  .alert { padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: none; }
+  .alert.ok { background: rgba(76,175,135,0.12); color: var(--green); display: block; }
+  .alert.err { background: rgba(224,85,85,0.12); color: var(--red); display: block; }
+
+  /* ---- Privacy ---- */
+  .privacy {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem; font-size: 0.85rem; color: var(--text2); line-height: 1.7;
+  }
+  .privacy strong { color: var(--text); }
+
+  .hidden { display: none !important; }
+
+  footer {
+    text-align: center; padding: 2rem 1rem;
+    color: var(--text2); font-size: 0.78rem;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* ---- Create topic form ---- */
+  .create-topic-form { margin-top: 1rem; }
+  .create-topic-form .field { margin-bottom: 0.75rem; }
+
+  /* ---- Network log ---- */
+  .net-log {
+    font-family: monospace; font-size: 0.75rem; color: var(--text2);
+    background: var(--surface2); border-radius: 8px;
+    padding: 0.75rem 1rem; max-height: 120px; overflow-y: auto;
+    margin-top: 0.75rem;
+  }
+  .net-log div { margin-bottom: 2px; }
+  .net-log .ok { color: var(--green); }
+  .net-log .warn { color: var(--orange); }
+  .net-log .err { color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- HEADER                                                           -->
+<!-- ================================================================ -->
+<header>
+  <div class="logo"><span>Open</span>Democracy<small>P2P</small></div>
+  <div class="header-stats">
+    <span><span class="peer-dot" id="net-dot"></span> Peers: <strong id="st-peers">0</strong></span>
+    <span>Verified: <strong id="st-enrolled">0</strong></span>
+    <span>Submissions: <strong id="st-subs">0</strong></span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ============================================================== -->
+  <!-- HERO                                                           -->
+  <!-- ============================================================== -->
+  <div class="hero">
+    <h2>Your voice. <em>Verified.</em><br>No server needed.</h2>
+    <p>Peer-to-peer democracy. Every browser is the server.
+       Share a link, connect directly, vote — like BitTorrent for democracy.</p>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- HOW IT WORKS                                                   -->
+  <!-- ============================================================== -->
+  <section>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h3>Create or join a room</h3>
+        <p>One person starts a room. Others join with the link.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3>Verify your identity</h3>
+        <p>Biometric scan on your device. Keys stay local.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3>Participate</h3>
+        <p>Submit opinions, ideas, or votes — replicated to all peers.</p>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <h3>Everyone verifies</h3>
+        <p>Each browser checks every signature independently.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- alert -->
+  <div class="alert" id="alert"></div>
+
+  <!-- ============================================================== -->
+  <!-- ROOM (create or join)                                          -->
+  <!-- ============================================================== -->
+  <section id="sec-room">
+    <!-- Before joining/creating -->
+    <div id="room-setup" class="card">
+      <h2>Start or Join a Room</h2>
+      <p class="desc">
+        A room is a peer-to-peer network. The creator hosts the entry point.
+        Once connected, everyone talks directly — no server in the middle.
+      </p>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+        <button onclick="createRoom()">Create New Room</button>
+        <button class="secondary" onclick="document.getElementById('join-fields').classList.toggle('hidden')">Join Existing Room</button>
+      </div>
+      <div id="join-fields" class="hidden" style="margin-top:1rem;">
+        <div class="field">
+          <label for="join-id">Room code</label>
+          <input type="text" id="join-id" placeholder="e.g. oak-river-7293">
+        </div>
+        <button onclick="joinRoom()">Connect</button>
+      </div>
+    </div>
+
+    <!-- After connected -->
+    <div id="room-info" class="room-banner hidden">
+      <div>
+        <div style="font-size:0.82rem; color:var(--text2);">Room</div>
+        <div class="room-id" id="room-id-display"></div>
+        <div class="room-meta" id="room-meta"></div>
+      </div>
+      <div class="room-actions">
+        <button class="small secondary" onclick="copyLink()">Copy invite link</button>
+        <button class="small secondary" onclick="toggleNetLog()">Network log</button>
+      </div>
+      <div class="net-log hidden" id="net-log" style="width:100%;"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- ENROLLMENT / IDENTITY                                          -->
+  <!-- ============================================================== -->
+  <section id="sec-enroll" class="hidden">
+    <div class="id-banner" id="id-banner">
+      <div>
+        <div class="meta">Identity</div>
+        <div class="status not-enrolled" id="id-text">Not yet verified</div>
+      </div>
+      <button id="id-btn" onclick="toggleEnroll()">Verify Identity</button>
+    </div>
+
+    <div class="card hidden" id="enroll-card">
+      <h2>Biometric Verification</h2>
+      <p class="desc">
+        Select at least 2 factors. In production, your device would scan real biometrics.
+        The raw data never leaves your device — only a cryptographic key is shared with
+        your peers for verification.
+      </p>
+
+      <div class="prog"><div class="bar" id="prog-bar" style="width:0%"></div></div>
+
+      <div class="factors" id="factors">
+        <div class="factor" data-f="fingerprint" onclick="pickFactor(this)">
+          <div class="ic">&#9757;</div>
+          <div class="nm">Fingerprint</div>
+          <div class="check">&#10003; selected</div>
+        </div>
+        <div class="factor" data-f="face" onclick="pickFactor(this)">
+          <div class="ic">&#128100;</div>
+          <div class="nm">Face</div>
+          <div class="check">&#10003; selected</div>
+        </div>
+        <div class="factor" data-f="iris" onclick="pickFactor(this)">
+          <div class="ic">&#128065;</div>
+          <div class="nm">Iris Scan</div>
+          <div class="check">&#10003; selected</div>
+        </div>
+        <div class="factor" data-f="voice" onclick="pickFactor(this)">
+          <div class="ic">&#127908;</div>
+          <div class="nm">Voice</div>
+          <div class="check">&#10003; selected</div>
+        </div>
+      </div>
+
+      <button class="green full" id="enroll-btn" onclick="doEnroll()" disabled>
+        Select at least 2 factors
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- CREATE TOPIC                                                   -->
+  <!-- ============================================================== -->
+  <section id="sec-create-topic" class="hidden">
+    <div class="card">
+      <h2>Create a Topic</h2>
+      <p class="desc">Add a question or issue for the group to participate in.</p>
+      <button class="secondary" onclick="document.getElementById('create-topic-form').classList.toggle('hidden')">
+        + New Topic
+      </button>
+      <div id="create-topic-form" class="create-topic-form hidden">
+        <div class="field">
+          <label for="new-topic-title">Title</label>
+          <input type="text" id="new-topic-title" placeholder="e.g. Should we adopt universal basic income?">
+        </div>
+        <div class="field">
+          <label for="new-topic-desc">Description</label>
+          <textarea id="new-topic-desc" rows="2" placeholder="Explain the issue..."></textarea>
+        </div>
+        <div class="field">
+          <label for="new-topic-options">Vote options (comma-separated, leave blank for opinion-only)</label>
+          <input type="text" id="new-topic-options" placeholder="e.g. Yes, No, Needs more research">
+        </div>
+        <button class="green" onclick="createTopic()">Create Topic</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- TOPICS                                                         -->
+  <!-- ============================================================== -->
+  <section id="sec-topics" class="hidden">
+    <h2 style="margin-bottom:0.75rem; font-size:1.15rem;">Open Topics</h2>
+    <div id="topic-list"></div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- PARTICIPATE                                                    -->
+  <!-- ============================================================== -->
+  <section id="sec-participate" class="hidden">
+    <div class="card">
+      <h2 id="part-title"></h2>
+      <p class="desc" id="part-desc"></p>
+
+      <div class="tabs" id="part-tabs"></div>
+
+      <div id="form-opinion" class="hidden">
+        <div class="field">
+          <label for="txt-opinion">Share your perspective</label>
+          <textarea id="txt-opinion" rows="4" placeholder="What do you think about this issue?"></textarea>
+        </div>
+        <button class="green" onclick="send('opinion')">Submit Opinion</button>
+      </div>
+
+      <div id="form-idea" class="hidden">
+        <div class="field">
+          <label for="txt-idea">Propose a solution or approach</label>
+          <textarea id="txt-idea" rows="4" placeholder="Describe your idea..."></textarea>
+        </div>
+        <button class="green" onclick="send('idea')">Submit Idea</button>
+      </div>
+
+      <div id="form-vote" class="hidden">
+        <div class="field">
+          <label for="sel-vote">Cast your vote</label>
+          <select id="sel-vote"></select>
+        </div>
+        <button class="green" onclick="send('vote')">Cast Vote</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>What others have said</h2>
+      <div id="sub-list">
+        <p style="color:var(--text2); font-size:0.85rem;">
+          No submissions yet. Be the first to participate.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- PRIVACY                                                        -->
+  <!-- ============================================================== -->
+  <div class="privacy" id="sec-privacy" style="display:none;">
+    <strong>How your data is protected (P2P edition):</strong>
+    Biometric scans are processed on your device only. A cryptographic key
+    is generated locally and the public half is shared with peers so they can
+    verify your submissions. All data is replicated across every connected browser —
+    there is no central server to hack, shut down, or censor. If any
+    peer goes offline, the remaining network still holds the complete record.
+    One key per person means one vote per person.
+  </div>
+</div>
+
+<footer>
+  OpenDemocracy P2P &mdash; no server, no censorship, no single point of failure
+  &middot; <a href="https://github.com/AshmanRoonz/OpenDemocracy" target="_blank">GitHub</a>
+</footer>
+
+<!-- PeerJS for WebRTC signaling -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<script>
+/* ==================================================================
+   OpenDemocracy — Peer-to-Peer Edition
+   ==================================================================
+   Architecture:
+   - Every browser is both client AND server
+   - WebRTC data channels (via PeerJS) connect peers directly
+   - Full mesh: every peer connects to every other peer
+   - State (enrollments, topics, submissions) replicated via gossip
+   - Each peer independently verifies all cryptographic signatures
+   - No central server — host on GitHub Pages, open from file://, anywhere
+   ================================================================== */
+
+/* ---- P2P State ---- */
+const state = {
+  roomId: null,
+  isHost: false,
+  myPeerId: null,
+  peer: null,              // PeerJS instance
+  connections: new Map(),  // peerId -> DataConnection
+  peerList: [],            // known peer IDs
+
+  // Replicated data (same on every peer)
+  enrollments: new Map(),  // anonymous_id -> { public_key, factors, enrolled_at }
+  topics: new Map(),       // topic_id -> { id, title, description, ... }
+  submissions: new Map(),  // submission_id -> { id, topic_id, anonymous_id, type, content, signature, ... }
+  seen: new Set(),         // message IDs we've already processed (dedup)
+};
+
+/* ---- Local identity (only on this browser) ---- */
+let me = JSON.parse(localStorage.getItem("od_p2p_me") || "null");
+let selectedFactors = [];
+let currentTopic = null;
+let currentTab = "opinion";
+
+/* ==================================================================
+   CRYPTO (all in-browser via Web Crypto API)
+   ================================================================== */
+
+async function generateKeypair() {
+  // Generate HMAC key for signing (prototype — production would use Ed25519)
+  const rawKey = new Uint8Array(32);
+  crypto.getRandomValues(rawKey);
+  const privateKey = bytesToHex(rawKey);
+  const publicKey = bytesToHex(new Uint8Array(
+    await crypto.subtle.digest("SHA-256", rawKey)
+  ));
+  return { privateKey, publicKey };
+}
+
+async function signMessage(publicKey, message) {
+  // HMAC-SHA256 sign using public key (matches the server prototype's scheme)
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", enc.encode(publicKey),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return bytesToHex(new Uint8Array(sig));
+}
+
+async function verifySignature(publicKey, message, signature) {
+  const expected = await signMessage(publicKey, message);
+  return expected === signature;
+}
+
+function generateId(len = 12) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return bytesToHex(arr).slice(0, len);
+}
+
+function bytesToHex(bytes) {
+  return [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/* ==================================================================
+   ROOM MANAGEMENT
+   ================================================================== */
+
+const ADJECTIVES = ["red","blue","green","gold","oak","elm","iron","swift","calm","bold","warm","cool","deep","high","wild"];
+const NOUNS = ["river","stone","cloud","flame","forge","tower","ridge","grove","storm","shore","field","moon","star","peak","wolf"];
+
+function generateRoomId() {
+  const a = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const n = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+  const d = Math.floor(Math.random() * 9000) + 1000;
+  return `${a}-${n}-${d}`;
+}
+
+function createRoom() {
+  const roomId = generateRoomId();
+  state.roomId = roomId;
+  state.isHost = true;
+  initPeer(roomId);
+}
+
+function joinRoom() {
+  let roomId = document.getElementById("join-id").value.trim();
+  if (!roomId) { flash("Enter a room code.", "err"); return; }
+  state.roomId = roomId;
+  state.isHost = false;
+  initPeer(null); // random peer ID, then connect to host
+}
+
+function initPeer(peerId) {
+  // PeerJS uses its free cloud signaling server to establish WebRTC connections.
+  // After the initial handshake, all data flows directly peer-to-peer.
+  const opts = { debug: 0 };
+  state.peer = peerId ? new Peer(peerId, opts) : new Peer(opts);
+
+  state.peer.on("open", (id) => {
+    state.myPeerId = id;
+    netLog("Connected as: " + id, "ok");
+
+    // Update URL hash for sharing
+    if (state.isHost) {
+      window.location.hash = state.roomId;
+    }
+
+    showRoomUI();
+
+    // If not host, connect to the host
+    if (!state.isHost) {
+      connectToPeer(state.roomId);
+    }
+  });
+
+  state.peer.on("connection", (conn) => {
+    setupConnection(conn);
+  });
+
+  state.peer.on("error", (err) => {
+    if (err.type === "unavailable-id") {
+      flash("Room already exists. Try joining instead.", "err");
+    } else if (err.type === "peer-unavailable") {
+      flash("Could not reach room host. They may be offline.", "err");
+    } else {
+      netLog("Error: " + err.type + " — " + err.message, "err");
+    }
+  });
+}
+
+function connectToPeer(peerId) {
+  if (peerId === state.myPeerId) return;
+  if (state.connections.has(peerId)) return;
+
+  netLog("Connecting to " + peerId + "...");
+  const conn = state.peer.connect(peerId, { reliable: true });
+  setupConnection(conn);
+}
+
+function setupConnection(conn) {
+  conn.on("open", () => {
+    state.connections.set(conn.peer, conn);
+    netLog("Peer connected: " + conn.peer, "ok");
+    updateStats();
+
+    // Send full state sync to the new peer
+    conn.send({
+      type: "sync",
+      msgId: generateId(),
+      enrollments: [...state.enrollments.entries()],
+      topics: [...state.topics.entries()],
+      submissions: [...state.submissions.entries()],
+      peerList: [...state.connections.keys(), state.myPeerId],
+    });
+  });
+
+  conn.on("data", (data) => handleMessage(data, conn.peer));
+
+  conn.on("close", () => {
+    state.connections.delete(conn.peer);
+    netLog("Peer disconnected: " + conn.peer, "warn");
+    updateStats();
+  });
+
+  conn.on("error", (err) => {
+    netLog("Connection error with " + conn.peer + ": " + err, "err");
+  });
+}
+
+/* ==================================================================
+   GOSSIP PROTOCOL
+   ================================================================== */
+
+function broadcast(msg) {
+  // Tag every message with a unique ID for dedup
+  if (!msg.msgId) msg.msgId = generateId(16);
+  state.seen.add(msg.msgId);
+
+  for (const [, conn] of state.connections) {
+    try { conn.send(msg); } catch (_) { /* peer may have disconnected */ }
+  }
+}
+
+async function handleMessage(msg, fromPeer) {
+  // Dedup: ignore messages we've already seen
+  if (msg.msgId && state.seen.has(msg.msgId)) return;
+  if (msg.msgId) state.seen.add(msg.msgId);
+
+  switch (msg.type) {
+    case "sync":
+      await handleSync(msg, fromPeer);
+      break;
+    case "enroll":
+      handleEnrollMsg(msg);
+      break;
+    case "topic":
+      handleTopicMsg(msg);
+      break;
+    case "submit":
+      await handleSubmitMsg(msg);
+      break;
+  }
+}
+
+async function handleSync(msg, fromPeer) {
+  netLog("State sync from " + fromPeer, "ok");
+
+  // Merge enrollments
+  for (const [id, data] of msg.enrollments) {
+    if (!state.enrollments.has(id)) {
+      state.enrollments.set(id, data);
+    }
+  }
+
+  // Merge topics
+  for (const [id, data] of msg.topics) {
+    if (!state.topics.has(id)) {
+      state.topics.set(id, data);
+    }
+  }
+
+  // Merge submissions (verify each one)
+  for (const [id, data] of msg.submissions) {
+    if (!state.submissions.has(id)) {
+      const enrollment = state.enrollments.get(data.anonymous_id);
+      if (enrollment) {
+        const valid = await verifySignature(
+          enrollment.public_key, data.nonce, data.signature
+        );
+        if (valid) {
+          state.submissions.set(id, data);
+        } else {
+          netLog("Rejected invalid submission " + id, "warn");
+        }
+      }
+    }
+  }
+
+  // Connect to peers we don't know yet
+  for (const peerId of (msg.peerList || [])) {
+    if (peerId !== state.myPeerId && !state.connections.has(peerId)) {
+      connectToPeer(peerId);
+    }
+  }
+
+  refreshAll();
+}
+
+function handleEnrollMsg(msg) {
+  if (state.enrollments.has(msg.anonymous_id)) return;
+  state.enrollments.set(msg.anonymous_id, {
+    public_key: msg.public_key,
+    factors: msg.factors,
+    enrolled_at: msg.enrolled_at,
+  });
+  // Re-gossip to peers who may not have seen it
+  broadcast(msg);
+  refreshAll();
+}
+
+function handleTopicMsg(msg) {
+  if (state.topics.has(msg.topic.id)) return;
+  state.topics.set(msg.topic.id, msg.topic);
+  broadcast(msg);
+  refreshAll();
+}
+
+async function handleSubmitMsg(msg) {
+  if (state.submissions.has(msg.submission.id)) return;
+
+  // Verify the signature before accepting
+  const enrollment = state.enrollments.get(msg.submission.anonymous_id);
+  if (!enrollment) {
+    netLog("Rejected submission from unknown identity", "warn");
+    return;
+  }
+
+  const valid = await verifySignature(
+    enrollment.public_key,
+    msg.submission.nonce,
+    msg.submission.signature
+  );
+  if (!valid) {
+    netLog("Rejected submission with invalid signature", "warn");
+    return;
+  }
+
+  // Check one-person-one-vote per topic+type
+  for (const [, sub] of state.submissions) {
+    if (sub.topic_id === msg.submission.topic_id &&
+        sub.anonymous_id === msg.submission.anonymous_id &&
+        sub.submission_type === msg.submission.submission_type) {
+      netLog("Rejected duplicate submission", "warn");
+      return;
+    }
+  }
+
+  state.submissions.set(msg.submission.id, msg.submission);
+  broadcast(msg);
+  refreshAll();
+}
+
+/* ==================================================================
+   LOCAL ACTIONS
+   ================================================================== */
+
+async function doEnroll() {
+  const btn = document.getElementById("enroll-btn");
+  btn.disabled = true;
+  btn.textContent = "Scanning biometrics...";
+  await pause(1200);
+  btn.textContent = "Generating cryptographic key...";
+  await pause(600);
+
+  const { privateKey, publicKey } = await generateKeypair();
+  const anonymousId = generateId(16);
+  const factorNames = [...selectedFactors];
+
+  const enrollment = {
+    public_key: publicKey,
+    factors: factorNames,
+    enrolled_at: new Date().toISOString(),
+  };
+  state.enrollments.set(anonymousId, enrollment);
+
+  // Save locally (private key NEVER leaves this browser)
+  me = {
+    anonymous_id: anonymousId,
+    public_key: publicKey,
+    private_key: privateKey,
+    factors_enrolled: factorNames,
+  };
+  localStorage.setItem("od_p2p_me", JSON.stringify(me));
+
+  // Broadcast enrollment to all peers
+  broadcast({
+    type: "enroll",
+    anonymous_id: anonymousId,
+    public_key: publicKey,
+    factors: factorNames,
+    enrolled_at: enrollment.enrolled_at,
+  });
+
+  refreshIdentity();
+  updateStats();
+  flash("Identity verified. Your private key is stored only in this browser.", "ok");
+}
+
+function createTopic() {
+  const title = document.getElementById("new-topic-title").value.trim();
+  const desc = document.getElementById("new-topic-desc").value.trim();
+  const optStr = document.getElementById("new-topic-options").value.trim();
+  if (!title) { flash("Enter a topic title.", "err"); return; }
+
+  const voteOptions = optStr ? optStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+  const topic = {
+    id: generateId(12),
+    title,
+    description: desc,
+    allow_opinions: true,
+    allow_ideas: true,
+    allow_votes: voteOptions.length > 0,
+    vote_options: voteOptions,
+    created_at: new Date().toISOString(),
+  };
+
+  state.topics.set(topic.id, topic);
+  broadcast({ type: "topic", topic });
+
+  // Clear form
+  document.getElementById("new-topic-title").value = "";
+  document.getElementById("new-topic-desc").value = "";
+  document.getElementById("new-topic-options").value = "";
+  document.getElementById("create-topic-form").classList.add("hidden");
+
+  refreshAll();
+  flash("Topic created and shared with all peers.", "ok");
+}
+
+async function send(type) {
+  if (!me) { flash("You must verify your identity first.", "err"); return; }
+  if (!currentTopic) return;
+
+  let content = "";
+  if (type === "opinion") content = document.getElementById("txt-opinion").value.trim();
+  else if (type === "idea") content = document.getElementById("txt-idea").value.trim();
+  else if (type === "vote") content = document.getElementById("sel-vote").value;
+  if (!content) { flash("Please enter your " + type + " first.", "err"); return; }
+
+  // Check if already submitted this type for this topic
+  for (const [, sub] of state.submissions) {
+    if (sub.topic_id === currentTopic.id &&
+        sub.anonymous_id === me.anonymous_id &&
+        sub.submission_type === type) {
+      flash("You already submitted a " + type + " for this topic.", "err");
+      return;
+    }
+  }
+
+  // Generate a nonce and sign it
+  const nonce = generateId(32);
+  const signature = await signMessage(me.public_key, nonce);
+
+  const submission = {
+    id: generateId(12),
+    topic_id: currentTopic.id,
+    anonymous_id: me.anonymous_id,
+    submission_type: type,
+    content,
+    nonce,
+    signature,
+    submitted_at: new Date().toISOString(),
+  };
+
+  state.submissions.set(submission.id, submission);
+  broadcast({ type: "submit", submission });
+
+  if (type === "opinion") document.getElementById("txt-opinion").value = "";
+  if (type === "idea") document.getElementById("txt-idea").value = "";
+  refreshAll();
+  flash(type.charAt(0).toUpperCase() + type.slice(1) + " submitted and broadcast to all peers.", "ok");
+}
+
+/* ==================================================================
+   UI
+   ================================================================== */
+
+function showRoomUI() {
+  document.getElementById("room-setup").classList.add("hidden");
+  document.getElementById("room-info").classList.remove("hidden");
+  document.getElementById("room-id-display").textContent = state.roomId;
+  document.getElementById("room-meta").textContent =
+    state.isHost ? "You are the host (entry point for new peers)" : "Connected to room";
+
+  // Show remaining sections
+  document.getElementById("sec-enroll").classList.remove("hidden");
+  document.getElementById("sec-create-topic").classList.remove("hidden");
+  document.getElementById("sec-topics").classList.remove("hidden");
+  document.getElementById("sec-privacy").style.display = "";
+
+  // If already enrolled from a previous session, restore identity
+  if (me) {
+    // Re-register our enrollment in the local state
+    if (!state.enrollments.has(me.anonymous_id)) {
+      const enrollment = {
+        public_key: me.public_key,
+        factors: me.factors_enrolled,
+        enrolled_at: new Date().toISOString(),
+      };
+      state.enrollments.set(me.anonymous_id, enrollment);
+      broadcast({
+        type: "enroll",
+        anonymous_id: me.anonymous_id,
+        public_key: me.public_key,
+        factors: me.factors_enrolled,
+        enrolled_at: enrollment.enrolled_at,
+      });
+    }
+  }
+
+  refreshIdentity();
+  refreshAll();
+}
+
+function refreshIdentity() {
+  const txt = document.getElementById("id-text");
+  const btn = document.getElementById("id-btn");
+  if (me) {
+    txt.textContent = "Verified (" + me.factors_enrolled.join(", ") + ")";
+    txt.className = "status enrolled";
+    btn.textContent = "Verified";
+    btn.disabled = true;
+    btn.className = "secondary";
+    document.getElementById("enroll-card").classList.add("hidden");
+  } else {
+    txt.textContent = "Not yet verified";
+    txt.className = "status not-enrolled";
+    btn.textContent = "Verify Identity";
+    btn.disabled = false;
+  }
+}
+
+function toggleEnroll() {
+  document.getElementById("enroll-card").classList.toggle("hidden");
+}
+
+function pickFactor(el) {
+  const f = el.dataset.f;
+  el.classList.toggle("on");
+  selectedFactors = [...document.querySelectorAll(".factor.on")].map(e => e.dataset.f);
+  const pct = Math.min((selectedFactors.length / 2) * 100, 100);
+  document.getElementById("prog-bar").style.width = pct + "%";
+  const btn = document.getElementById("enroll-btn");
+  btn.disabled = selectedFactors.length < 2;
+  btn.textContent = selectedFactors.length < 2
+    ? "Select at least 2 factors"
+    : "Verify with " + selectedFactors.join(" + ");
+}
+
+function refreshAll() {
+  renderTopics();
+  if (currentTopic) renderSubmissions(currentTopic.id);
+  updateStats();
+}
+
+function renderTopics() {
+  const el = document.getElementById("topic-list");
+  const topics = [...state.topics.values()];
+  if (!topics.length) {
+    el.innerHTML = '<p style="color:var(--text2)">No topics yet. Create one above.</p>';
+    return;
+  }
+  el.innerHTML = topics.map(t =>
+    '<div class="card topic' + (currentTopic && currentTopic.id === t.id ? ' on' : '') +
+    '" onclick="openTopic(\'' + t.id + '\')">' +
+    '<h3>' + esc(t.title) + '</h3>' +
+    '<p class="desc">' + esc(t.description) + '</p>' +
+    '</div>'
+  ).join("");
+}
+
+function openTopic(id) {
+  const t = state.topics.get(id);
+  if (!t) return;
+  currentTopic = t;
+
+  document.querySelectorAll(".topic").forEach(el => {
+    el.classList.toggle("on", el.querySelector("h3").textContent === t.title);
+  });
+
+  document.getElementById("sec-participate").classList.remove("hidden");
+  document.getElementById("part-title").textContent = t.title;
+  document.getElementById("part-desc").textContent = t.description;
+
+  const allowed = [];
+  if (t.allow_opinions) allowed.push("opinion");
+  if (t.allow_ideas) allowed.push("idea");
+  if (t.allow_votes) allowed.push("vote");
+  document.getElementById("part-tabs").innerHTML = allowed.map(x =>
+    '<div class="tab" onclick="setTab(\'' + x + '\')">' +
+    x.charAt(0).toUpperCase() + x.slice(1) +
+    '</div>'
+  ).join("");
+  if (allowed.length) setTab(allowed[0]);
+
+  if (t.vote_options && t.vote_options.length) {
+    document.getElementById("sel-vote").innerHTML =
+      t.vote_options.map(o => '<option value="' + esc(o) + '">' + esc(o) + '</option>').join("");
+  }
+
+  renderSubmissions(id);
+}
+
+function setTab(t) {
+  currentTab = t;
+  document.querySelectorAll(".tab").forEach(el =>
+    el.classList.toggle("on", el.textContent.toLowerCase() === t)
+  );
+  document.getElementById("form-opinion").classList.toggle("hidden", t !== "opinion");
+  document.getElementById("form-idea").classList.toggle("hidden", t !== "idea");
+  document.getElementById("form-vote").classList.toggle("hidden", t !== "vote");
+}
+
+function renderSubmissions(topicId) {
+  const subs = [...state.submissions.values()].filter(s => s.topic_id === topicId);
+  const el = document.getElementById("sub-list");
+  if (!subs.length) {
+    el.innerHTML = '<p style="color:var(--text2); font-size:0.85rem;">No submissions yet. Be the first.</p>';
+    return;
+  }
+  el.innerHTML = subs.map(s =>
+    '<div class="sub-item">' +
+    '<span class="badge badge-' + s.submission_type + '">' + s.submission_type + '</span>' +
+    esc(s.content) +
+    '</div>'
+  ).join("");
+}
+
+function updateStats() {
+  document.getElementById("st-peers").textContent = state.connections.size;
+  document.getElementById("st-enrolled").textContent = state.enrollments.size;
+  document.getElementById("st-subs").textContent = state.submissions.size;
+
+  const dot = document.getElementById("net-dot");
+  dot.className = state.connections.size > 0 ? "peer-dot" : "peer-dot off";
+}
+
+function copyLink() {
+  const url = window.location.origin + window.location.pathname + "#" + state.roomId;
+  navigator.clipboard.writeText(url).then(() => {
+    flash("Invite link copied to clipboard.", "ok");
+  }).catch(() => {
+    flash("Link: " + url, "ok");
+  });
+}
+
+/* ---- Network log ---- */
+function toggleNetLog() {
+  document.getElementById("net-log").classList.toggle("hidden");
+}
+
+function netLog(msg, cls) {
+  const el = document.getElementById("net-log");
+  const div = document.createElement("div");
+  div.textContent = new Date().toLocaleTimeString() + " " + msg;
+  if (cls) div.className = cls;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+
+  // Keep log from growing too large
+  while (el.children.length > 100) el.removeChild(el.firstChild);
+}
+
+/* ---- Helpers ---- */
+function flash(msg, type) {
+  const el = document.getElementById("alert");
+  el.textContent = msg;
+  el.className = "alert " + type;
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  setTimeout(() => { el.className = "alert"; }, 6000);
+}
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ==================================================================
+   BOOT
+   ================================================================== */
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Check URL hash for auto-join
+  const hash = window.location.hash.slice(1);
+  if (hash) {
+    document.getElementById("join-id").value = hash;
+    joinRoom();
+  }
+});
+</script>
+</body>
+</html>
