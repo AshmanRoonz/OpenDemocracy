@@ -399,7 +399,7 @@
   <div class="hero">
     <h2>Your voice. <em>Verified.</em><br>No server needed.</h2>
     <p>Peer-to-peer democracy. Every browser is the server.
-       Share a link, connect directly, vote — like BitTorrent for democracy.</p>
+       One global mesh — open it, participate, and your voice joins humanity's shared record.</p>
   </div>
 
   <!-- ============================================================== -->
@@ -409,8 +409,8 @@
     <div class="steps">
       <div class="step">
         <div class="num">1</div>
-        <h3>Create or join a room</h3>
-        <p>One person starts a room. Others join with the link.</p>
+        <h3>Open the page</h3>
+        <p>Your browser joins the global mesh automatically.</p>
       </div>
       <div class="step">
         <div class="num">2</div>
@@ -424,8 +424,8 @@
       </div>
       <div class="step">
         <div class="num">4</div>
-        <h3>Everyone verifies</h3>
-        <p>Each browser checks every signature independently.</p>
+        <h3>AI analyzes collectively</h3>
+        <p>Every browser runs sentiment, clustering, and bias detection locally.</p>
       </div>
     </div>
   </section>
@@ -434,38 +434,17 @@
   <div class="alert" id="alert"></div>
 
   <!-- ============================================================== -->
-  <!-- ROOM (create or join)                                          -->
+  <!-- NETWORK STATUS                                                 -->
   <!-- ============================================================== -->
   <section id="sec-room">
-    <!-- Before joining/creating -->
-    <div id="room-setup" class="card">
-      <h2>Start or Join a Room</h2>
-      <p class="desc">
-        A room is a peer-to-peer network. The creator hosts the entry point.
-        Once connected, everyone talks directly — no server in the middle.
-      </p>
-      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-        <button onclick="createRoom()">Create New Room</button>
-        <button class="secondary" onclick="document.getElementById('join-fields').classList.toggle('hidden')">Join Existing Room</button>
-      </div>
-      <div id="join-fields" class="hidden" style="margin-top:1rem;">
-        <div class="field">
-          <label for="join-id">Room code</label>
-          <input type="text" id="join-id" placeholder="e.g. oak-river-7293">
-        </div>
-        <button onclick="joinRoom()">Connect</button>
-      </div>
-    </div>
-
-    <!-- After connected -->
-    <div id="room-info" class="room-banner hidden">
+    <div id="room-info" class="room-banner">
       <div>
-        <div style="font-size:0.82rem; color:var(--text2);">Room</div>
-        <div class="room-id" id="room-id-display"></div>
-        <div class="room-meta" id="room-meta"></div>
+        <div style="font-size:0.82rem; color:var(--text2);">Network</div>
+        <div class="room-id" id="room-id-display">Connecting...</div>
+        <div class="room-meta" id="room-meta">Joining the global mesh</div>
       </div>
       <div class="room-actions">
-        <button class="small secondary" onclick="copyLink()">Copy invite link</button>
+        <button class="small secondary" onclick="copyLink()">Share link</button>
         <button class="small secondary" onclick="toggleNetLog()">Network log</button>
       </div>
       <div class="net-log hidden" id="net-log" style="width:100%;"></div>
@@ -475,7 +454,7 @@
   <!-- ============================================================== -->
   <!-- ENROLLMENT / IDENTITY                                          -->
   <!-- ============================================================== -->
-  <section id="sec-enroll" class="hidden">
+  <section id="sec-enroll">
     <div class="id-banner" id="id-banner">
       <div>
         <div class="meta">Identity</div>
@@ -526,7 +505,7 @@
   <!-- ============================================================== -->
   <!-- CREATE TOPIC                                                   -->
   <!-- ============================================================== -->
-  <section id="sec-create-topic" class="hidden">
+  <section id="sec-create-topic">
     <div class="card">
       <h2>Create a Topic</h2>
       <p class="desc">Add a question or issue for the group to participate in.</p>
@@ -554,7 +533,7 @@
   <!-- ============================================================== -->
   <!-- TOPICS                                                         -->
   <!-- ============================================================== -->
-  <section id="sec-topics" class="hidden">
+  <section id="sec-topics">
     <h2 style="margin-bottom:0.75rem; font-size:1.15rem;">Open Topics</h2>
     <div id="topic-list"></div>
   </section>
@@ -607,7 +586,7 @@
   <!-- ============================================================== -->
   <!-- COLLECTIVE INTELLIGENCE PANEL                                  -->
   <!-- ============================================================== -->
-  <section id="sec-analysis" class="hidden">
+  <section id="sec-analysis">
     <div class="analysis-panel">
       <h2>Collective Intelligence</h2>
       <p class="subtitle">
@@ -626,27 +605,32 @@
   <!-- ============================================================== -->
   <!-- PRIVACY                                                        -->
   <!-- ============================================================== -->
-  <div class="privacy" id="sec-privacy" style="display:none;">
-    <strong>How your data is protected (P2P edition):</strong>
+  <div class="privacy" id="sec-privacy">
+    <strong>How your data is protected:</strong>
     Biometric scans are processed on your device only. A cryptographic key
     is generated locally and the public half is shared with peers so they can
-    verify your submissions. All data is replicated across every connected browser —
-    there is no central server to hack, shut down, or censor. If any
-    peer goes offline, the remaining network still holds the complete record.
-    One key per person means one vote per person.
+    verify your submissions. All data is replicated across every connected browser
+    in a single global mesh — there is no central server to hack, shut down, or
+    censor. If any peer goes offline, the remaining network still holds the
+    complete record. One key per person means one vote per person.
     <br><br>
     <strong>Durable storage:</strong>
     All replicated data (enrollments, topics, submissions) is persisted to
-    IndexedDB on your device. When you rejoin a room — even after closing
+    IndexedDB on your device. When you reopen the page — even after closing
     the browser — your node rehydrates from local storage and shares what
     it knows with peers. Data propagation uses G-Set CRDTs (grow-only sets)
-    with set-union merge, so there are no conflicts. The seen-set for
-    message deduplication is capped at 10,000 entries to bound memory use.
+    with set-union merge, so there are no conflicts.
+    <br><br>
+    <strong>Local AI processing:</strong>
+    Sentiment analysis, opinion clustering, and bias detection all run
+    locally in your browser. Every peer independently computes the same
+    results from the same replicated data. No external AI service is
+    contacted.
   </div>
 </div>
 
 <footer>
-  OpenDemocracy P2P &mdash; no server, no censorship, no single point of failure
+  OpenDemocracy &mdash; one global mesh, no server, no censorship, no single point of failure
   &middot; <a href="https://github.com/AshmanRoonz/OpenDemocracy" target="_blank">GitHub</a>
 </footer>
 
@@ -997,54 +981,44 @@ function bytesToHex(bytes) {
 }
 
 /* ==================================================================
-   ROOM MANAGEMENT
+   GLOBAL MESH — single network, auto-join
+   ==================================================================
+   There's one mesh for all of OpenDemocracy. No rooms, no codes.
+   Under the hood, one PeerJS ID ("od-global-hub") acts as the
+   initial rendezvous point. If that ID is already taken (someone
+   else is the hub), we join as a regular peer and connect to them.
+   Once connected, all peers share their known peer lists and the
+   mesh self-heals — the hub is just the entry point, not a single
+   point of failure.
    ================================================================== */
 
-const ADJECTIVES = ["red","blue","green","gold","oak","elm","iron","swift","calm","bold","warm","cool","deep","high","wild"];
-const NOUNS = ["river","stone","cloud","flame","forge","tower","ridge","grove","storm","shore","field","moon","star","peak","wolf"];
+const GLOBAL_HUB_ID = "od-global-hub";
 
-function generateRoomId() {
-  const a = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-  const n = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  const d = Math.floor(Math.random() * 9000) + 1000;
-  return `${a}-${n}-${d}`;
-}
-
-function createRoom() {
-  const roomId = generateRoomId();
-  state.roomId = roomId;
+function joinGlobalMesh() {
+  state.roomId = "global";
+  // Try to become the hub first. If the ID is taken, join as a peer.
   state.isHost = true;
-  initPeer(roomId);
-}
-
-function joinRoom() {
-  let roomId = document.getElementById("join-id").value.trim();
-  if (!roomId) { flash("Enter a room code.", "err"); return; }
-  state.roomId = roomId;
-  state.isHost = false;
-  initPeer(null); // random peer ID, then connect to host
+  initPeer(GLOBAL_HUB_ID);
 }
 
 function initPeer(peerId) {
-  // PeerJS uses its free cloud signaling server to establish WebRTC connections.
-  // After the initial handshake, all data flows directly peer-to-peer.
   const opts = { debug: 0 };
   state.peer = peerId ? new Peer(peerId, opts) : new Peer(opts);
 
   state.peer.on("open", (id) => {
     state.myPeerId = id;
     netLog("Connected as: " + id, "ok");
-
-    // Update URL hash for sharing
-    if (state.isHost) {
-      window.location.hash = state.roomId;
-    }
+    document.getElementById("room-id-display").textContent = "Global Mesh";
+    document.getElementById("room-meta").textContent =
+      (id === GLOBAL_HUB_ID)
+        ? "You are the hub node (entry point for new peers)"
+        : "Connected — " + id.slice(0, 8) + "...";
 
     showRoomUI();
 
-    // If not host, connect to the host
-    if (!state.isHost) {
-      connectToPeer(state.roomId);
+    // If we're not the hub, connect to the hub to bootstrap
+    if (id !== GLOBAL_HUB_ID) {
+      connectToPeer(GLOBAL_HUB_ID);
     }
   });
 
@@ -1054,9 +1028,13 @@ function initPeer(peerId) {
 
   state.peer.on("error", (err) => {
     if (err.type === "unavailable-id") {
-      flash("Room already exists. Try joining instead.", "err");
+      // Hub ID already taken — good, join as a regular peer
+      netLog("Hub exists, joining as peer...", "ok");
+      state.isHost = false;
+      initPeer(null); // random ID, then connect to hub
     } else if (err.type === "peer-unavailable") {
-      flash("Could not reach room host. They may be offline.", "err");
+      netLog("Hub offline. You are the only node — others will connect to you.", "warn");
+      document.getElementById("room-meta").textContent = "Standalone — waiting for peers";
     } else {
       netLog("Error: " + err.type + " — " + err.message, "err");
     }
@@ -1480,22 +1458,8 @@ async function send(type) {
    ================================================================== */
 
 async function showRoomUI() {
-  document.getElementById("room-setup").classList.add("hidden");
-  document.getElementById("room-info").classList.remove("hidden");
-  document.getElementById("room-id-display").textContent = state.roomId;
-  document.getElementById("room-meta").textContent =
-    state.isHost ? "You are the host (entry point for new peers)" : "Connected to room";
-
-  // Show remaining sections
-  document.getElementById("sec-enroll").classList.remove("hidden");
-  document.getElementById("sec-create-topic").classList.remove("hidden");
-  document.getElementById("sec-topics").classList.remove("hidden");
-  document.getElementById("sec-analysis").classList.remove("hidden");
-  document.getElementById("sec-privacy").style.display = "";
-
-  // If already enrolled from a previous session, restore identity
+  // If already enrolled from a previous session, restore and broadcast identity
   if (me) {
-    // Re-register our enrollment in the local state (and persist)
     if (!state.enrollments.has(me.anonymous_id)) {
       const enrollment = {
         public_key: me.public_key,
@@ -1659,9 +1623,9 @@ async function updateStorageStats() {
 }
 
 function copyLink() {
-  const url = window.location.origin + window.location.pathname + "#" + state.roomId;
+  const url = window.location.origin + window.location.pathname;
   navigator.clipboard.writeText(url).then(() => {
-    flash("Invite link copied to clipboard.", "ok");
+    flash("Link copied. Anyone who opens it joins the same global mesh.", "ok");
   }).catch(() => {
     flash("Link: " + url, "ok");
   });
@@ -2096,12 +2060,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 3. Update storage display
   await updateStorageStats();
 
-  // 4. Check URL hash for auto-join
-  const hash = window.location.hash.slice(1);
-  if (hash) {
-    document.getElementById("join-id").value = hash;
-    joinRoom();
-  }
+  // 4. Auto-join the global mesh — no room codes, one network for all
+  joinGlobalMesh();
 });
 </script>
 </body>
