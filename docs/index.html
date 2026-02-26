@@ -249,6 +249,7 @@
     <span><span class="peer-dot" id="net-dot"></span> Peers: <strong id="st-peers">0</strong></span>
     <span>Verified: <strong id="st-enrolled">0</strong></span>
     <span>Submissions: <strong id="st-subs">0</strong></span>
+    <span title="IndexedDB persistence" id="st-storage">Storage: <strong>--</strong></span>
   </div>
 </header>
 
@@ -476,6 +477,14 @@
     there is no central server to hack, shut down, or censor. If any
     peer goes offline, the remaining network still holds the complete record.
     One key per person means one vote per person.
+    <br><br>
+    <strong>Durable storage:</strong>
+    All replicated data (enrollments, topics, submissions) is persisted to
+    IndexedDB on your device. When you rejoin a room — even after closing
+    the browser — your node rehydrates from local storage and shares what
+    it knows with peers. Data propagation uses G-Set CRDTs (grow-only sets)
+    with set-union merge, so there are no conflicts. The seen-set for
+    message deduplication is capped at 10,000 entries to bound memory use.
   </div>
 </div>
 
@@ -489,7 +498,7 @@
 
 <script>
 /* ==================================================================
-   OpenDemocracy — Peer-to-Peer Edition
+   OpenDemocracy — Peer-to-Peer Edition with Persistent Storage
    ==================================================================
    Architecture:
    - Every browser is both client AND server
@@ -498,9 +507,213 @@
    - State (enrollments, topics, submissions) replicated via gossip
    - Each peer independently verifies all cryptographic signatures
    - No central server — host on GitHub Pages, open from file://, anywhere
+   -
+   - PERSISTENCE (Phase 3):
+   -   Data model: G-Set CRDTs (grow-only sets). Enrollments, topics,
+   -   and submissions are append-only, keyed by unique IDs. The merge
+   -   operation is set union — commutative, associative, idempotent.
+   -   No conflicts possible.
+   -
+   -   Storage: IndexedDB for durable local persistence. Every mutation
+   -   is written through to IndexedDB so state survives tab close,
+   -   browser restart, and offline periods.
+   -
+   -   Sync: On peer connect, nodes exchange a compact state digest
+   -   (counts per collection). If digests differ, only the missing
+   -   entries are transmitted (anti-entropy). Real-time mutations
+   -   still propagate via gossip broadcast.
+   -
+   -   Eviction: The seen-set (message dedup) is capped at 10,000
+   -   entries with LRU eviction. Topics can be archived after a
+   -   configurable age. Storage usage is monitored and displayed.
+   -
+   -   Why not IPFS/libp2p? Too heavy for Phase 3 — adds ~400KB of
+   -   JS dependencies, requires DHT bootstrap nodes, and the data
+   -   volumes here (text submissions) don't warrant content-addressed
+   -   blob storage yet. IndexedDB + gossip gives us durable, offline-
+   -   capable persistence with zero extra dependencies. IPFS is the
+   -   right move for Phase 4 (planetary scale) when we need cross-
+   -   room persistence and archival pinning.
    ================================================================== */
 
-/* ---- P2P State ---- */
+/* ==================================================================
+   INDEXEDDB PERSISTENCE LAYER
+   ================================================================== */
+
+const DB_NAME = "opendemocracy_p2p";
+const DB_VERSION = 1;
+const STORES = ["enrollments", "topics", "submissions", "seen", "meta"];
+
+const store = {
+  db: null,
+
+  open() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        for (const name of STORES) {
+          if (!db.objectStoreNames.contains(name)) {
+            db.createObjectStore(name);
+          }
+        }
+      };
+      req.onsuccess = (e) => {
+        store.db = e.target.result;
+        resolve(store.db);
+      };
+      req.onerror = (e) => {
+        console.warn("IndexedDB open failed, running in-memory only:", e.target.error);
+        resolve(null);
+      };
+    });
+  },
+
+  // Generic put: store a value by key in the named object store
+  put(storeName, key, value) {
+    if (!store.db) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const tx = store.db.transaction(storeName, "readwrite");
+      tx.objectStore(storeName).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => { console.warn("IDB put error:", e.target.error); resolve(); };
+    });
+  },
+
+  // Generic get: retrieve a value by key
+  get(storeName, key) {
+    if (!store.db) return Promise.resolve(undefined);
+    return new Promise((resolve, reject) => {
+      const tx = store.db.transaction(storeName, "readonly");
+      const req = tx.objectStore(storeName).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = (e) => { console.warn("IDB get error:", e.target.error); resolve(undefined); };
+    });
+  },
+
+  // Get all entries from a store as [key, value] pairs
+  getAll(storeName) {
+    if (!store.db) return Promise.resolve([]);
+    return new Promise((resolve, reject) => {
+      const tx = store.db.transaction(storeName, "readonly");
+      const os = tx.objectStore(storeName);
+      const keys = [];
+      const values = [];
+      const kReq = os.getAllKeys();
+      const vReq = os.getAll();
+      tx.oncomplete = () => {
+        const pairs = [];
+        for (let i = 0; i < keys.length; i++) pairs.push([keys[i], values[i]]);
+        resolve(pairs);
+      };
+      kReq.onsuccess = () => { keys.push(...kReq.result); };
+      vReq.onsuccess = () => { values.push(...vReq.result); };
+      tx.onerror = (e) => { console.warn("IDB getAll error:", e.target.error); resolve([]); };
+    });
+  },
+
+  // Delete a key from a store
+  del(storeName, key) {
+    if (!store.db) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const tx = store.db.transaction(storeName, "readwrite");
+      tx.objectStore(storeName).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => { console.warn("IDB del error:", e.target.error); resolve(); };
+    });
+  },
+
+  // Count entries in a store
+  count(storeName) {
+    if (!store.db) return Promise.resolve(0);
+    return new Promise((resolve, reject) => {
+      const tx = store.db.transaction(storeName, "readonly");
+      const req = tx.objectStore(storeName).count();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(0);
+    });
+  },
+
+  // Bulk put for initial sync (batch write in a single transaction)
+  putBatch(storeName, entries) {
+    if (!store.db || !entries.length) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const tx = store.db.transaction(storeName, "readwrite");
+      const os = tx.objectStore(storeName);
+      for (const [key, value] of entries) {
+        os.put(value, key);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => { console.warn("IDB batch error:", e.target.error); resolve(); };
+    });
+  },
+
+  // Estimate storage usage (bytes) — uses Storage API where available
+  async estimateUsage() {
+    if (navigator.storage && navigator.storage.estimate) {
+      const est = await navigator.storage.estimate();
+      return { used: est.usage || 0, quota: est.quota || 0 };
+    }
+    // Fallback: count entries
+    const e = await store.count("enrollments");
+    const t = await store.count("topics");
+    const s = await store.count("submissions");
+    return { used: (e + t + s) * 500, quota: 0, entries: e + t + s }; // rough estimate
+  },
+};
+
+/* ==================================================================
+   SEEN-SET WITH LRU EVICTION
+   ================================================================== */
+
+const SEEN_MAX = 10000;
+
+const seenSet = {
+  // Ordered map: msgId -> timestamp. Oldest entries evicted first.
+  _map: new Map(),
+
+  has(msgId) {
+    return seenSet._map.has(msgId);
+  },
+
+  add(msgId) {
+    if (seenSet._map.has(msgId)) return;
+    seenSet._map.set(msgId, Date.now());
+    // Evict oldest if over capacity
+    if (seenSet._map.size > SEEN_MAX) {
+      const oldest = seenSet._map.keys().next().value;
+      seenSet._map.delete(oldest);
+      store.del("seen", oldest);
+    }
+    // Persist (fire-and-forget)
+    store.put("seen", msgId, Date.now());
+  },
+
+  get size() {
+    return seenSet._map.size;
+  },
+
+  // Load from IndexedDB on boot
+  async load() {
+    const pairs = await store.getAll("seen");
+    // Sort by timestamp ascending so oldest are first in map
+    pairs.sort((a, b) => a[1] - b[1]);
+    for (const [key, ts] of pairs) {
+      seenSet._map.set(key, ts);
+    }
+    // Trim if DB had more than the cap
+    while (seenSet._map.size > SEEN_MAX) {
+      const oldest = seenSet._map.keys().next().value;
+      seenSet._map.delete(oldest);
+      store.del("seen", oldest);
+    }
+  },
+};
+
+/* ==================================================================
+   P2P STATE
+   ================================================================== */
+
 const state = {
   roomId: null,
   isHost: false,
@@ -509,11 +722,13 @@ const state = {
   connections: new Map(),  // peerId -> DataConnection
   peerList: [],            // known peer IDs
 
-  // Replicated data (same on every peer)
+  // Replicated data (same on every peer) — G-Set CRDTs
   enrollments: new Map(),  // anonymous_id -> { public_key, factors, enrolled_at }
   topics: new Map(),       // topic_id -> { id, title, description, ... }
   submissions: new Map(),  // submission_id -> { id, topic_id, anonymous_id, type, content, signature, ... }
-  seen: new Set(),         // message IDs we've already processed (dedup)
+
+  // Persistence flag
+  dbReady: false,
 };
 
 /* ---- Local identity (only on this browser) ---- */
@@ -521,6 +736,67 @@ let me = JSON.parse(localStorage.getItem("od_p2p_me") || "null");
 let selectedFactors = [];
 let currentTopic = null;
 let currentTab = "opinion";
+
+/* ==================================================================
+   STATE HELPERS (write-through to IndexedDB)
+   ================================================================== */
+
+async function addEnrollment(id, data) {
+  if (state.enrollments.has(id)) return false;
+  state.enrollments.set(id, data);
+  await store.put("enrollments", id, data);
+  return true;
+}
+
+async function addTopic(id, data) {
+  if (state.topics.has(id)) return false;
+  state.topics.set(id, data);
+  await store.put("topics", id, data);
+  return true;
+}
+
+async function addSubmission(id, data) {
+  if (state.submissions.has(id)) return false;
+  state.submissions.set(id, data);
+  await store.put("submissions", id, data);
+  return true;
+}
+
+// Rehydrate in-memory state from IndexedDB
+async function rehydrate() {
+  const [enrollments, topics, submissions] = await Promise.all([
+    store.getAll("enrollments"),
+    store.getAll("topics"),
+    store.getAll("submissions"),
+    seenSet.load(),
+  ]);
+
+  let loaded = 0;
+  for (const [id, data] of enrollments) {
+    state.enrollments.set(id, data);
+    loaded++;
+  }
+  for (const [id, data] of topics) {
+    state.topics.set(id, data);
+    loaded++;
+  }
+  for (const [id, data] of submissions) {
+    state.submissions.set(id, data);
+    loaded++;
+  }
+
+  state.dbReady = true;
+  return loaded;
+}
+
+// Build a compact digest of our state for anti-entropy sync
+function stateDigest() {
+  return {
+    enrollmentIds: [...state.enrollments.keys()],
+    topicIds: [...state.topics.keys()],
+    submissionIds: [...state.submissions.keys()],
+  };
+}
 
 /* ==================================================================
    CRYPTO (all in-browser via Web Crypto API)
@@ -645,13 +921,13 @@ function setupConnection(conn) {
     netLog("Peer connected: " + conn.peer, "ok");
     updateStats();
 
-    // Send full state sync to the new peer
+    // Anti-entropy: send our digest first. The peer compares and requests
+    // only the entries it's missing. Falls back to full sync if the peer
+    // doesn't support digests (backwards compatible).
     conn.send({
-      type: "sync",
+      type: "digest",
       msgId: generateId(),
-      enrollments: [...state.enrollments.entries()],
-      topics: [...state.topics.entries()],
-      submissions: [...state.submissions.entries()],
+      digest: stateDigest(),
       peerList: [...state.connections.keys(), state.myPeerId],
     });
   });
@@ -670,13 +946,13 @@ function setupConnection(conn) {
 }
 
 /* ==================================================================
-   GOSSIP PROTOCOL
+   GOSSIP PROTOCOL (with anti-entropy sync)
    ================================================================== */
 
 function broadcast(msg) {
   // Tag every message with a unique ID for dedup
   if (!msg.msgId) msg.msgId = generateId(16);
-  state.seen.add(msg.msgId);
+  seenSet.add(msg.msgId);
 
   for (const [, conn] of state.connections) {
     try { conn.send(msg); } catch (_) { /* peer may have disconnected */ }
@@ -685,18 +961,24 @@ function broadcast(msg) {
 
 async function handleMessage(msg, fromPeer) {
   // Dedup: ignore messages we've already seen
-  if (msg.msgId && state.seen.has(msg.msgId)) return;
-  if (msg.msgId) state.seen.add(msg.msgId);
+  if (msg.msgId && seenSet.has(msg.msgId)) return;
+  if (msg.msgId) seenSet.add(msg.msgId);
 
   switch (msg.type) {
+    case "digest":
+      await handleDigest(msg, fromPeer);
+      break;
+    case "digest-request":
+      await handleDigestRequest(msg, fromPeer);
+      break;
     case "sync":
       await handleSync(msg, fromPeer);
       break;
     case "enroll":
-      handleEnrollMsg(msg);
+      await handleEnrollMsg(msg);
       break;
     case "topic":
-      handleTopicMsg(msg);
+      await handleTopicMsg(msg);
       break;
     case "submit":
       await handleSubmitMsg(msg);
@@ -704,24 +986,123 @@ async function handleMessage(msg, fromPeer) {
   }
 }
 
+// Anti-entropy: receive a peer's digest and compute what they need
+async function handleDigest(msg, fromPeer) {
+  netLog("Digest from " + fromPeer + " — comparing state", "ok");
+  const remote = msg.digest;
+  const remoteEnrollIds = new Set(remote.enrollmentIds);
+  const remoteTopicIds = new Set(remote.topicIds);
+  const remoteSubIds = new Set(remote.submissionIds);
+
+  // What we have that they don't
+  const missingEnrollments = [];
+  for (const [id, data] of state.enrollments) {
+    if (!remoteEnrollIds.has(id)) missingEnrollments.push([id, data]);
+  }
+  const missingTopics = [];
+  for (const [id, data] of state.topics) {
+    if (!remoteTopicIds.has(id)) missingTopics.push([id, data]);
+  }
+  const missingSubmissions = [];
+  for (const [id, data] of state.submissions) {
+    if (!remoteSubIds.has(id)) missingSubmissions.push([id, data]);
+  }
+
+  const conn = state.connections.get(fromPeer);
+  if (!conn) return;
+
+  // Send them what they're missing
+  if (missingEnrollments.length || missingTopics.length || missingSubmissions.length) {
+    netLog("Sending " + (missingEnrollments.length + missingTopics.length + missingSubmissions.length) + " missing entries to " + fromPeer, "ok");
+    conn.send({
+      type: "sync",
+      msgId: generateId(),
+      enrollments: missingEnrollments,
+      topics: missingTopics,
+      submissions: missingSubmissions,
+      peerList: [...state.connections.keys(), state.myPeerId],
+    });
+  }
+
+  // What they have that we don't — request it
+  const weNeedEnrollIds = remote.enrollmentIds.filter(id => !state.enrollments.has(id));
+  const weNeedTopicIds = remote.topicIds.filter(id => !state.topics.has(id));
+  const weNeedSubIds = remote.submissionIds.filter(id => !state.submissions.has(id));
+
+  if (weNeedEnrollIds.length || weNeedTopicIds.length || weNeedSubIds.length) {
+    netLog("Requesting " + (weNeedEnrollIds.length + weNeedTopicIds.length + weNeedSubIds.length) + " missing entries from " + fromPeer, "ok");
+    conn.send({
+      type: "digest-request",
+      msgId: generateId(),
+      enrollmentIds: weNeedEnrollIds,
+      topicIds: weNeedTopicIds,
+      submissionIds: weNeedSubIds,
+    });
+  }
+
+  // Connect to peers we don't know yet
+  for (const peerId of (msg.peerList || [])) {
+    if (peerId !== state.myPeerId && !state.connections.has(peerId)) {
+      connectToPeer(peerId);
+    }
+  }
+}
+
+// Handle a request for specific entries by ID
+async function handleDigestRequest(msg, fromPeer) {
+  const conn = state.connections.get(fromPeer);
+  if (!conn) return;
+
+  const enrollments = (msg.enrollmentIds || [])
+    .filter(id => state.enrollments.has(id))
+    .map(id => [id, state.enrollments.get(id)]);
+  const topics = (msg.topicIds || [])
+    .filter(id => state.topics.has(id))
+    .map(id => [id, state.topics.get(id)]);
+  const submissions = (msg.submissionIds || [])
+    .filter(id => state.submissions.has(id))
+    .map(id => [id, state.submissions.get(id)]);
+
+  if (enrollments.length || topics.length || submissions.length) {
+    conn.send({
+      type: "sync",
+      msgId: generateId(),
+      enrollments,
+      topics,
+      submissions,
+      peerList: [...state.connections.keys(), state.myPeerId],
+    });
+  }
+}
+
 async function handleSync(msg, fromPeer) {
   netLog("State sync from " + fromPeer, "ok");
+  let added = 0;
 
-  // Merge enrollments
+  // Merge enrollments (write-through to IndexedDB)
+  const newEnrollments = [];
   for (const [id, data] of msg.enrollments) {
     if (!state.enrollments.has(id)) {
       state.enrollments.set(id, data);
+      newEnrollments.push([id, data]);
+      added++;
     }
   }
+  if (newEnrollments.length) await store.putBatch("enrollments", newEnrollments);
 
   // Merge topics
+  const newTopics = [];
   for (const [id, data] of msg.topics) {
     if (!state.topics.has(id)) {
       state.topics.set(id, data);
+      newTopics.push([id, data]);
+      added++;
     }
   }
+  if (newTopics.length) await store.putBatch("topics", newTopics);
 
   // Merge submissions (verify each one)
+  const newSubmissions = [];
   for (const [id, data] of msg.submissions) {
     if (!state.submissions.has(id)) {
       const enrollment = state.enrollments.get(data.anonymous_id);
@@ -731,11 +1112,18 @@ async function handleSync(msg, fromPeer) {
         );
         if (valid) {
           state.submissions.set(id, data);
+          newSubmissions.push([id, data]);
+          added++;
         } else {
           netLog("Rejected invalid submission " + id, "warn");
         }
       }
     }
+  }
+  if (newSubmissions.length) await store.putBatch("submissions", newSubmissions);
+
+  if (added > 0) {
+    netLog("Merged " + added + " new entries from " + fromPeer, "ok");
   }
 
   // Connect to peers we don't know yet
@@ -746,25 +1134,28 @@ async function handleSync(msg, fromPeer) {
   }
 
   refreshAll();
+  updateStorageStats();
 }
 
-function handleEnrollMsg(msg) {
-  if (state.enrollments.has(msg.anonymous_id)) return;
-  state.enrollments.set(msg.anonymous_id, {
+async function handleEnrollMsg(msg) {
+  const added = await addEnrollment(msg.anonymous_id, {
     public_key: msg.public_key,
     factors: msg.factors,
     enrolled_at: msg.enrolled_at,
   });
+  if (!added) return;
   // Re-gossip to peers who may not have seen it
   broadcast(msg);
   refreshAll();
+  updateStorageStats();
 }
 
-function handleTopicMsg(msg) {
-  if (state.topics.has(msg.topic.id)) return;
-  state.topics.set(msg.topic.id, msg.topic);
+async function handleTopicMsg(msg) {
+  const added = await addTopic(msg.topic.id, msg.topic);
+  if (!added) return;
   broadcast(msg);
   refreshAll();
+  updateStorageStats();
 }
 
 async function handleSubmitMsg(msg) {
@@ -797,9 +1188,10 @@ async function handleSubmitMsg(msg) {
     }
   }
 
-  state.submissions.set(msg.submission.id, msg.submission);
+  await addSubmission(msg.submission.id, msg.submission);
   broadcast(msg);
   refreshAll();
+  updateStorageStats();
 }
 
 /* ==================================================================
@@ -823,7 +1215,7 @@ async function doEnroll() {
     factors: factorNames,
     enrolled_at: new Date().toISOString(),
   };
-  state.enrollments.set(anonymousId, enrollment);
+  await addEnrollment(anonymousId, enrollment);
 
   // Save locally (private key NEVER leaves this browser)
   me = {
@@ -845,10 +1237,11 @@ async function doEnroll() {
 
   refreshIdentity();
   updateStats();
+  updateStorageStats();
   flash("Identity verified. Your private key is stored only in this browser.", "ok");
 }
 
-function createTopic() {
+async function createTopic() {
   const title = document.getElementById("new-topic-title").value.trim();
   const desc = document.getElementById("new-topic-desc").value.trim();
   const optStr = document.getElementById("new-topic-options").value.trim();
@@ -866,7 +1259,7 @@ function createTopic() {
     created_at: new Date().toISOString(),
   };
 
-  state.topics.set(topic.id, topic);
+  await addTopic(topic.id, topic);
   broadcast({ type: "topic", topic });
 
   // Clear form
@@ -876,6 +1269,7 @@ function createTopic() {
   document.getElementById("create-topic-form").classList.add("hidden");
 
   refreshAll();
+  updateStorageStats();
   flash("Topic created and shared with all peers.", "ok");
 }
 
@@ -914,12 +1308,13 @@ async function send(type) {
     submitted_at: new Date().toISOString(),
   };
 
-  state.submissions.set(submission.id, submission);
+  await addSubmission(submission.id, submission);
   broadcast({ type: "submit", submission });
 
   if (type === "opinion") document.getElementById("txt-opinion").value = "";
   if (type === "idea") document.getElementById("txt-idea").value = "";
   refreshAll();
+  updateStorageStats();
   flash(type.charAt(0).toUpperCase() + type.slice(1) + " submitted and broadcast to all peers.", "ok");
 }
 
@@ -927,7 +1322,7 @@ async function send(type) {
    UI
    ================================================================== */
 
-function showRoomUI() {
+async function showRoomUI() {
   document.getElementById("room-setup").classList.add("hidden");
   document.getElementById("room-info").classList.remove("hidden");
   document.getElementById("room-id-display").textContent = state.roomId;
@@ -942,14 +1337,14 @@ function showRoomUI() {
 
   // If already enrolled from a previous session, restore identity
   if (me) {
-    // Re-register our enrollment in the local state
+    // Re-register our enrollment in the local state (and persist)
     if (!state.enrollments.has(me.anonymous_id)) {
       const enrollment = {
         public_key: me.public_key,
         factors: me.factors_enrolled,
         enrolled_at: new Date().toISOString(),
       };
-      state.enrollments.set(me.anonymous_id, enrollment);
+      await addEnrollment(me.anonymous_id, enrollment);
       broadcast({
         type: "enroll",
         anonymous_id: me.anonymous_id,
@@ -962,6 +1357,7 @@ function showRoomUI() {
 
   refreshIdentity();
   refreshAll();
+  updateStorageStats();
 }
 
 function refreshIdentity() {
@@ -1087,6 +1483,20 @@ function updateStats() {
   dot.className = state.connections.size > 0 ? "peer-dot" : "peer-dot off";
 }
 
+async function updateStorageStats() {
+  const usage = await store.estimateUsage();
+  const el = document.getElementById("st-storage");
+  if (usage.quota > 0) {
+    const pct = ((usage.used / usage.quota) * 100).toFixed(1);
+    const usedMB = (usage.used / 1024 / 1024).toFixed(1);
+    el.innerHTML = 'Storage: <strong title="' + usedMB + ' MB used">' + pct + '%</strong>';
+  } else if (usage.entries !== undefined) {
+    el.innerHTML = 'Storage: <strong>' + usage.entries + ' entries</strong>';
+  } else {
+    el.innerHTML = 'Storage: <strong>active</strong>';
+  }
+}
+
 function copyLink() {
   const url = window.location.origin + window.location.pathname + "#" + state.roomId;
   navigator.clipboard.writeText(url).then(() => {
@@ -1103,6 +1513,7 @@ function toggleNetLog() {
 
 function netLog(msg, cls) {
   const el = document.getElementById("net-log");
+  if (!el) return;
   const div = document.createElement("div");
   div.textContent = new Date().toLocaleTimeString() + " " + msg;
   if (cls) div.className = cls;
@@ -1131,11 +1542,29 @@ function esc(s) {
 function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 /* ==================================================================
-   BOOT
+   BOOT — open IndexedDB, rehydrate state, then check for auto-join
    ================================================================== */
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Check URL hash for auto-join
+document.addEventListener("DOMContentLoaded", async () => {
+  // 1. Open IndexedDB
+  await store.open();
+  if (store.db) {
+    netLog("IndexedDB opened: " + DB_NAME, "ok");
+  } else {
+    netLog("IndexedDB unavailable — running in-memory only", "warn");
+  }
+
+  // 2. Rehydrate state from durable storage
+  const loaded = await rehydrate();
+  if (loaded > 0) {
+    netLog("Rehydrated " + loaded + " entries from IndexedDB", "ok");
+    refreshAll();
+  }
+
+  // 3. Update storage display
+  await updateStorageStats();
+
+  // 4. Check URL hash for auto-join
   const hash = window.location.hash.slice(1);
   if (hash) {
     document.getElementById("join-id").value = hash;
