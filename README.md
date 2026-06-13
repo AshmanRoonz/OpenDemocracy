@@ -102,6 +102,9 @@ Prioritizes raw signal over curated narratives. Designed to resist capture by an
 - [ ] Implement basic NLP pipeline for opinion clustering
 - [ ] Create transparent methodology dashboard
 - [ ] Run first public pilot on a single issue
+- [x] **Frequent Democracy:** per-citizen *live issues* feed that surfaces
+  issues by relevance, urgency, and activity — hearing every voice *when it
+  matters to that voice*. See [FREQUENT_DEMOCRACY.md](FREQUENT_DEMOCRACY.md).
 
 ### Phase 3: Deliberative Integration
 - [ ] Partner with [Polis](https://pol.is/)-style deliberative tools
