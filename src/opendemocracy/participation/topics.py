@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from opendemocracy.models import Topic
+from opendemocracy.participation.relevance import Interests, rank_topics
 
 
 class TopicStore:
@@ -42,6 +43,24 @@ class TopicStore:
     def list_open(self) -> list[Topic]:
         """Return all topics that are currently accepting submissions."""
         return [t for t in self._topics.values() if self.is_open(t.id)]
+
+    def list_live(
+        self,
+        interests: Interests | None = None,
+        submission_counts: dict[str, int] | None = None,
+    ) -> list[Topic]:
+        """Return open topics ordered for the *live issues* feed.
+
+        Topics are ranked by relevance to the citizen's ``interests``, how soon
+        they close, and how much activity they're attracting — so the issues
+        that matter to a given voice, right now, surface first. See
+        :mod:`opendemocracy.participation.relevance`.
+        """
+        return rank_topics(
+            self.list_open(),
+            interests or Interests(),
+            submission_counts,
+        )
 
     @property
     def count(self) -> int:

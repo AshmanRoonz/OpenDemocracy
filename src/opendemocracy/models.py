@@ -210,6 +210,12 @@ class Topic:
     allow_ideas: bool = True
     allow_votes: bool = True
     vote_options: list[str] = field(default_factory=list)  # for structured votes
+    # Relevance metadata — powers the "live issues" feed and personal alerts.
+    # A voice should be invited in when an issue actually concerns it, not on a
+    # fixed schedule. ``tags`` are free-form topic categories; ``region`` is an
+    # optional geographic scope (matching ``Demographics.region`` conventions).
+    tags: list[str] = field(default_factory=list)
+    region: str | None = None
 
 
 @dataclass

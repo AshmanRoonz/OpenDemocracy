@@ -158,7 +158,7 @@
   .prog .bar { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.4s ease; }
 
   /* ---- Forms ---- */
-  textarea, select, input[type="text"] {
+  textarea, select, input[type="text"], input[type="datetime-local"] {
     width: 100%; background: var(--surface2);
     border: 1px solid var(--border); border-radius: 8px;
     padding: 0.7rem 1rem; color: var(--text);
@@ -193,11 +193,61 @@
   .badge-vote { background: rgba(76,175,135,0.2); color: var(--green); }
 
   /* ---- Topic list ---- */
-  .topic { cursor: pointer; transition: border-color 0.15s; }
+  .topic { cursor: pointer; transition: border-color 0.15s; position: relative; }
   .topic:hover { border-color: var(--accent); }
+  .topic:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .topic.on { border-color: var(--accent); background: rgba(108,140,255,0.04); }
-  .topic h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+  .topic.for-you { border-color: var(--green); }
+  .topic h3 { font-size: 1rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
   .topic p { margin: 0; }
+  .topic-meta {
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    margin-top: 0.6rem; font-size: 0.75rem; color: var(--text2);
+  }
+  .topic-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .tag-chip {
+    font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 999px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
+  }
+  .tag-chip.matched { background: rgba(76,175,135,0.14); border-color: var(--green); color: var(--green); }
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .pill-foryou { background: rgba(76,175,135,0.16); color: var(--green); }
+  .pill-closing { background: rgba(224,96,144,0.16); color: #e06090; }
+  .pill-closed  { background: var(--surface2); color: var(--text2); }
+  .pill-active  { background: rgba(108,140,255,0.16); color: var(--accent); }
+
+  /* ---- Feed controls ---- */
+  .feed-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;
+  }
+  .feed-sort { display: flex; gap: 0.4rem; }
+  .feed-sort .tab { padding: 0.3rem 0.75rem; }
+
+  /* ---- Interests ---- */
+  .interest-chips { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .interest-chip {
+    font-size: 0.8rem; padding: 0.35rem 0.85rem; border-radius: 999px; cursor: pointer;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
+    transition: all 0.15s; user-select: none;
+  }
+  .interest-chip:hover { border-color: var(--accent); color: var(--text); }
+  .interest-chip.on { background: rgba(76,175,135,0.12); border-color: var(--green); color: var(--green); }
+  .interest-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- Match alert (a new issue matters to you) ---- */
+  .match-banner {
+    display: none; align-items: center; justify-content: space-between; gap: 0.75rem;
+    background: rgba(76,175,135,0.1); border: 1px solid var(--green);
+    border-radius: var(--radius); padding: 0.85rem 1.1rem; margin-bottom: 1rem;
+    font-size: 0.88rem; color: var(--text);
+  }
+  .match-banner.show { display: flex; }
+  .match-banner strong { color: var(--green); }
 
   /* ---- Alert ---- */
   .alert { padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: none; }
@@ -525,16 +575,66 @@
           <label for="new-topic-options">Vote options (comma-separated, leave blank for opinion-only)</label>
           <input type="text" id="new-topic-options" placeholder="e.g. Yes, No, Needs more research">
         </div>
+        <div class="field">
+          <label for="new-topic-tags">Topics / tags (comma-separated &mdash; helps reach the people it concerns)</label>
+          <input type="text" id="new-topic-tags" placeholder="e.g. housing, environment, transport">
+        </div>
+        <div class="field">
+          <label for="new-topic-region">Region (optional &mdash; leave blank for everyone)</label>
+          <input type="text" id="new-topic-region" placeholder="e.g. EU-North, US-West, Global">
+        </div>
+        <div class="field">
+          <label for="new-topic-deadline">Decision deadline (optional &mdash; drives "closing soon" urgency)</label>
+          <input type="datetime-local" id="new-topic-deadline">
+        </div>
         <button class="green" onclick="createTopic()">Create Topic</button>
       </div>
     </div>
   </section>
 
   <!-- ============================================================== -->
-  <!-- TOPICS                                                         -->
+  <!-- YOUR INTERESTS                                                 -->
+  <!-- ============================================================== -->
+  <section id="sec-interests">
+    <div class="card">
+      <h2>Issues you care about</h2>
+      <p class="desc">
+        Pick the topics and your region so issues that concern <em>you</em> rise
+        to the top &mdash; and you're alerted when a new one appears. Your choices
+        stay on this device; nothing is shared with peers.
+      </p>
+      <div class="interest-chips" id="interest-tags" role="group" aria-label="Topics you care about"></div>
+      <div class="field" style="margin-bottom:0; max-width:280px;">
+        <label for="interest-region">Your region</label>
+        <input type="text" id="interest-region" placeholder="e.g. EU-North (blank = global)"
+               aria-label="Your region" onchange="setRegionInterest(this.value)">
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- TOPICS — LIVE ISSUES FEED                                      -->
   <!-- ============================================================== -->
   <section id="sec-topics">
-    <h2 style="margin-bottom:0.75rem; font-size:1.15rem;">Open Topics</h2>
+    <!-- "A new issue matters to you" alert -->
+    <div class="match-banner" id="match-banner" role="status" aria-live="polite">
+      <span id="match-banner-text"></span>
+      <button class="small" onclick="dismissMatchBanner()" aria-label="Open this issue">View</button>
+    </div>
+
+    <div class="feed-head">
+      <h2 style="font-size:1.15rem;">Live Issues</h2>
+      <div class="feed-sort" id="feed-sort" role="group" aria-label="Sort issues">
+        <div class="tab on" data-sort="relevant" role="button" tabindex="0"
+             onclick="setSort('relevant')" onkeydown="chipKey(event, this)">For you</div>
+        <div class="tab" data-sort="urgent" role="button" tabindex="0"
+             onclick="setSort('urgent')" onkeydown="chipKey(event, this)">Closing soon</div>
+        <div class="tab" data-sort="active" role="button" tabindex="0"
+             onclick="setSort('active')" onkeydown="chipKey(event, this)">Most active</div>
+        <div class="tab" data-sort="new" role="button" tabindex="0"
+             onclick="setSort('new')" onkeydown="chipKey(event, this)">Newest</div>
+      </div>
+    </div>
     <div id="topic-list"></div>
   </section>
 
@@ -877,6 +977,102 @@ let me = JSON.parse(localStorage.getItem("od_p2p_me") || "null");
 let selectedFactors = [];
 let currentTopic = null;
 let currentTab = "opinion";
+
+/* ==================================================================
+   FREQUENT-DEMOCRACY RELEVANCE ENGINE
+   ------------------------------------------------------------------
+   Mirrors src/opendemocracy/participation/relevance.py so the browser
+   and the Python backend order issues identically. Three transparent
+   signals — relevance to your declared interests, urgency (how soon a
+   decision closes), and live activity — decide what surfaces first, so
+   a voice is invited in when an issue concerns it, not on a fixed cycle.
+   ================================================================== */
+
+const URGENCY_WINDOW_HOURS = 72;
+const W_RELEVANCE = 3, W_URGENCY = 2, W_ACTIVITY = 1;
+
+// The catalogue of topic categories a citizen can subscribe to. Kept short
+// and legible — this is civic infrastructure, not an ad-targeting taxonomy.
+const INTEREST_TAGS = [
+  "housing", "environment", "health", "education", "economy",
+  "transport", "justice", "technology", "energy", "democracy",
+];
+
+// Local-only interests. Never broadcast to peers — relevance is computed
+// entirely in your own browser.
+let interests = JSON.parse(localStorage.getItem("od_interests") || "null")
+  || { tags: [], region: "" };
+let feedSort = localStorage.getItem("od_feed_sort") || "relevant";
+// Topic IDs already shown to the user — so we only alert on genuinely new ones.
+let knownTopicIds = new Set();
+
+function normTags(arr) {
+  return new Set((arr || []).map(t => String(t).trim().toLowerCase()).filter(Boolean));
+}
+
+function topicSubmissionCount(topicId) {
+  let n = 0;
+  for (const [, s] of state.submissions) if (s.topic_id === topicId) n++;
+  return n;
+}
+
+function topicClosesAt(t) {
+  return t.closes_at ? new Date(t.closes_at).getTime() : null;
+}
+
+function isClosed(t, now) {
+  const c = topicClosesAt(t);
+  return c !== null && c <= (now || Date.now());
+}
+
+function relevanceScore(t) {
+  const want = normTags(interests.tags);
+  const have = normTags(t.tags);
+  const region = (interests.region || "").trim().toLowerCase();
+  const tRegion = (t.region || "").trim().toLowerCase();
+
+  if (have.size === 0 && !tRegion) return 0.25; // universal: concerns everyone
+  let score = 0;
+  if (want.size && have.size) {
+    let overlap = 0;
+    for (const tag of want) if (have.has(tag)) overlap++;
+    if (overlap) score += 0.7 * (overlap / have.size);
+  }
+  if (region && tRegion) {
+    if (region === tRegion) score += 0.3;
+  } else if (!tRegion) {
+    score += 0.1; // global-scope topic, partially relevant to all
+  }
+  return Math.min(score, 1);
+}
+
+// Stricter than relevance: only a concrete tag/region hit fires an alert.
+function matchesInterests(t) {
+  const want = normTags(interests.tags);
+  const have = normTags(t.tags);
+  for (const tag of want) if (have.has(tag)) return true;
+  const region = (interests.region || "").trim().toLowerCase();
+  const tRegion = (t.region || "").trim().toLowerCase();
+  return !!(region && tRegion && region === tRegion);
+}
+
+function urgencyScore(t, now) {
+  const closes = topicClosesAt(t);
+  if (closes === null) return 0;
+  const remHours = (closes - (now || Date.now())) / 3.6e6;
+  if (remHours <= 0 || remHours >= URGENCY_WINDOW_HOURS) return 0;
+  return 1 - (remHours / URGENCY_WINDOW_HOURS);
+}
+
+function activityScore(count) {
+  return count <= 0 ? 0 : count / (count + 10);
+}
+
+function compositeScore(t, now) {
+  return W_RELEVANCE * relevanceScore(t)
+       + W_URGENCY * urgencyScore(t, now)
+       + W_ACTIVITY * activityScore(topicSubmissionCount(t.id));
+}
 
 /* ==================================================================
    STATE HELPERS (write-through to IndexedDB)
@@ -1288,6 +1484,10 @@ async function handleEnrollMsg(msg) {
 async function handleTopicMsg(msg) {
   const added = await addTopic(msg.topic.id, msg.topic);
   if (!added) return;
+  // Alert the citizen if this fresh issue concerns them — checked before
+  // renderTopics() marks it "known". Backlog from anti-entropy sync arrives via
+  // handleSync instead, so opening the app never floods you with old alerts.
+  notifyIfRelevant(msg.topic);
   broadcast(msg);
   refreshAll();
   updateStorageStats();
@@ -1383,6 +1583,12 @@ async function createTopic() {
   if (!title) { flash("Enter a topic title.", "err"); return; }
 
   const voteOptions = optStr ? optStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+  const tagStr = document.getElementById("new-topic-tags").value.trim();
+  const tags = tagStr ? tagStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+  const region = document.getElementById("new-topic-region").value.trim();
+  const deadline = document.getElementById("new-topic-deadline").value;
+  const closesAt = deadline ? new Date(deadline).toISOString() : null;
+
   const topic = {
     id: generateId(12),
     title,
@@ -1391,16 +1597,23 @@ async function createTopic() {
     allow_ideas: true,
     allow_votes: voteOptions.length > 0,
     vote_options: voteOptions,
+    tags,
+    region,
+    closes_at: closesAt,
     created_at: new Date().toISOString(),
   };
 
   await addTopic(topic.id, topic);
+  knownTopicIds.add(topic.id); // it's mine — don't alert myself about it
   broadcast({ type: "topic", topic });
 
   // Clear form
   document.getElementById("new-topic-title").value = "";
   document.getElementById("new-topic-desc").value = "";
   document.getElementById("new-topic-options").value = "";
+  document.getElementById("new-topic-tags").value = "";
+  document.getElementById("new-topic-region").value = "";
+  document.getElementById("new-topic-deadline").value = "";
   document.getElementById("create-topic-form").classList.add("hidden");
 
   refreshAll();
@@ -1526,20 +1739,158 @@ function refreshAll() {
   updateStats();
 }
 
+function sortedTopics(now) {
+  const topics = [...state.topics.values()];
+  const score = {
+    relevant: t => compositeScore(t, now),
+    urgent:   t => urgencyScore(t, now),
+    active:   t => activityScore(topicSubmissionCount(t.id)),
+    new:      t => 0,
+  }[feedSort] || (() => 0);
+  return topics.sort((a, b) => {
+    // Closed issues always sink to the bottom — they're no longer actionable.
+    const ca = isClosed(a, now), cb = isClosed(b, now);
+    if (ca !== cb) return ca ? 1 : -1;
+    const d = score(b) - score(a);
+    if (Math.abs(d) > 1e-9) return d;
+    return new Date(b.created_at) - new Date(a.created_at); // tiebreak: newest
+  });
+}
+
+function timeLeftLabel(t, now) {
+  const closes = topicClosesAt(t);
+  if (closes === null) return null;
+  const rem = closes - now;
+  if (rem <= 0) return "closed";
+  const h = rem / 3.6e6;
+  if (h < 1) return Math.max(1, Math.round(rem / 6e4)) + "m left";
+  if (h < 48) return Math.round(h) + "h left";
+  return Math.round(h / 24) + "d left";
+}
+
 function renderTopics() {
   const el = document.getElementById("topic-list");
-  const topics = [...state.topics.values()];
+  const now = Date.now();
+  const topics = sortedTopics(now);
+
+  // Keep our "seen" set current so we only alert on truly new topics later.
+  for (const t of topics) knownTopicIds.add(t.id);
+
   if (!topics.length) {
-    el.innerHTML = '<p style="color:var(--text2)">No topics yet. Create one above.</p>';
+    el.innerHTML = '<p style="color:var(--text2)">No issues yet. Create one above.</p>';
     return;
   }
-  el.innerHTML = topics.map(t =>
-    '<div class="card topic' + (currentTopic && currentTopic.id === t.id ? ' on' : '') +
-    '" onclick="openTopic(\'' + t.id + '\')">' +
-    '<h3>' + esc(t.title) + '</h3>' +
-    '<p class="desc">' + esc(t.description) + '</p>' +
-    '</div>'
+
+  const want = normTags(interests.tags);
+  el.innerHTML = topics.map(t => {
+    const mine = matchesInterests(t);
+    const closed = isClosed(t, now);
+    const closing = !closed && urgencyScore(t, now) > 0;
+    const subs = topicSubmissionCount(t.id);
+
+    const pills = [];
+    if (mine) pills.push('<span class="pill pill-foryou">&#9733; For you</span>');
+    if (closed) pills.push('<span class="pill pill-closed">Closed</span>');
+    else if (closing) pills.push('<span class="pill pill-closing">&#9201; ' + esc(timeLeftLabel(t, now)) + '</span>');
+    if (subs >= 3) pills.push('<span class="pill pill-active">&#128293; Active</span>');
+
+    const tagChips = (t.tags || []).map(tag =>
+      '<span class="tag-chip' + (want.has(String(tag).trim().toLowerCase()) ? ' matched' : '') + '">' +
+      esc(tag) + '</span>'
+    ).join("");
+
+    const meta = [];
+    meta.push(subs + (subs === 1 ? ' voice' : ' voices'));
+    if (t.region) meta.push('&#127758; ' + esc(t.region));
+    const tl = timeLeftLabel(t, now);
+    if (tl && !closing && !closed) meta.push(tl);
+
+    return '<div class="card topic' +
+      (currentTopic && currentTopic.id === t.id ? ' on' : '') +
+      (mine ? ' for-you' : '') +
+      '" role="button" tabindex="0"' +
+      ' aria-label="' + esc(t.title) + (mine ? ' (matches your interests)' : '') + '"' +
+      ' data-id="' + t.id + '"' +
+      ' onclick="openTopic(\'' + t.id + '\')"' +
+      ' onkeydown="topicKey(event, \'' + t.id + '\')">' +
+      '<h3>' + esc(t.title) + ' ' + pills.join(" ") + '</h3>' +
+      '<p class="desc">' + esc(t.description) + '</p>' +
+      (tagChips ? '<div class="topic-tags">' + tagChips + '</div>' : '') +
+      '<div class="topic-meta">' + meta.join(' &middot; ') + '</div>' +
+      '</div>';
+  }).join("");
+}
+
+// Keyboard activation for topic cards (Enter / Space).
+function topicKey(e, id) {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openTopic(id); }
+}
+
+// Keyboard activation for chip/tab style controls.
+function chipKey(e, el) {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); }
+}
+
+/* ---- Feed sort ---- */
+function setSort(mode) {
+  feedSort = mode;
+  localStorage.setItem("od_feed_sort", mode);
+  document.querySelectorAll("#feed-sort .tab").forEach(el =>
+    el.classList.toggle("on", el.dataset.sort === mode));
+  renderTopics();
+}
+
+/* ---- Interests (local only) ---- */
+function renderInterests() {
+  const wrap = document.getElementById("interest-tags");
+  const want = normTags(interests.tags);
+  wrap.innerHTML = INTEREST_TAGS.map(tag =>
+    '<span class="interest-chip' + (want.has(tag) ? ' on' : '') + '"' +
+    ' role="checkbox" tabindex="0" aria-checked="' + (want.has(tag) ? 'true' : 'false') + '"' +
+    ' onclick="toggleInterest(\'' + tag + '\')" onkeydown="chipKey(event, this)">' +
+    esc(tag) + '</span>'
   ).join("");
+  const regionInput = document.getElementById("interest-region");
+  if (regionInput && document.activeElement !== regionInput) {
+    regionInput.value = interests.region || "";
+  }
+}
+
+function saveInterests() {
+  localStorage.setItem("od_interests", JSON.stringify(interests));
+}
+
+function toggleInterest(tag) {
+  const want = normTags(interests.tags);
+  if (want.has(tag)) interests.tags = [...want].filter(t => t !== tag);
+  else interests.tags = [...want, tag];
+  saveInterests();
+  renderInterests();
+  renderTopics();
+}
+
+function setRegionInterest(val) {
+  interests.region = (val || "").trim();
+  saveInterests();
+  renderTopics();
+}
+
+/* ---- "A new issue matters to you" alert ---- */
+function notifyIfRelevant(topic) {
+  if (!topic || knownTopicIds.has(topic.id)) return;
+  if (!matchesInterests(topic)) return;
+  const banner = document.getElementById("match-banner");
+  document.getElementById("match-banner-text").innerHTML =
+    'A new issue matters to you: <strong>' + esc(topic.title) + '</strong>';
+  banner.classList.add("show");
+  banner.dataset.topicId = topic.id;
+}
+
+function dismissMatchBanner() {
+  const banner = document.getElementById("match-banner");
+  const id = banner.dataset.topicId;
+  banner.classList.remove("show");
+  if (id && state.topics.has(id)) openTopic(id);
 }
 
 function openTopic(id) {
@@ -1548,7 +1899,7 @@ function openTopic(id) {
   currentTopic = t;
 
   document.querySelectorAll(".topic").forEach(el => {
-    el.classList.toggle("on", el.querySelector("h3").textContent === t.title);
+    el.classList.toggle("on", el.dataset.id === t.id);
   });
 
   document.getElementById("sec-participate").classList.remove("hidden");
@@ -1560,7 +1911,8 @@ function openTopic(id) {
   if (t.allow_ideas) allowed.push("idea");
   if (t.allow_votes) allowed.push("vote");
   document.getElementById("part-tabs").innerHTML = allowed.map(x =>
-    '<div class="tab" onclick="setTab(\'' + x + '\')">' +
+    '<div class="tab" role="tab" tabindex="0" onclick="setTab(\'' + x + '\')"' +
+    ' onkeydown="chipKey(event, this)">' +
     x.charAt(0).toUpperCase() + x.slice(1) +
     '</div>'
   ).join("");
@@ -2042,6 +2394,10 @@ function runAnalysis(topicId) {
    ================================================================== */
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // 0. Restore local-only UI state: interests, feed sort.
+  renderInterests();
+  setSort(feedSort);
+
   // 1. Open IndexedDB
   await store.open();
   if (store.db) {
