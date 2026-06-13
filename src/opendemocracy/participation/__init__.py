@@ -16,8 +16,16 @@ from opendemocracy.participation.relevance import (
     composite_score,
     matches_interests,
     rank_topics,
+    region_matches,
     relevance_score,
     urgency_score,
+)
+from opendemocracy.participation.status import (
+    TopicState,
+    TopicStatus,
+    compute_status,
+    is_closed,
+    quorum_fraction,
 )
 from opendemocracy.participation.submissions import SubmissionStore
 from opendemocracy.participation.topics import TopicStore
@@ -25,11 +33,17 @@ from opendemocracy.participation.topics import TopicStore
 __all__ = [
     "Interests",
     "SubmissionStore",
+    "TopicState",
+    "TopicStatus",
     "TopicStore",
     "activity_score",
     "composite_score",
+    "compute_status",
+    "is_closed",
     "matches_interests",
+    "quorum_fraction",
     "rank_topics",
+    "region_matches",
     "relevance_score",
     "urgency_score",
 ]

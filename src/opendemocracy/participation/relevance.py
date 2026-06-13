@@ -56,6 +56,35 @@ def _aware(dt: datetime) -> datetime:
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
 
+def _region_segments(region: str) -> list[str]:
+    """Split a region path into normalized segments.
+
+    Regions are hierarchical paths separated by ``/`` — e.g. ``"EU/North"`` or
+    ``"US/West/CA"``. A flat name like ``"EU-North"`` is simply a one-segment
+    path, so existing data keeps working unchanged.
+    """
+    return [seg.strip().lower() for seg in region.split("/") if seg.strip()]
+
+
+def region_matches(interest_region: str | None, topic_region: str | None) -> bool:
+    """True when a citizen's region and a topic's region overlap hierarchically.
+
+    Real geography nests: a person in ``"EU/North"`` is concerned by an issue
+    scoped to ``"EU"`` (their area sits inside it), and equally by one scoped to
+    ``"EU/North/Sweden"`` (it sits inside their area). So a match holds when one
+    path is a prefix of the other. Both sides must be concrete — a global topic
+    (no region) is handled separately as a universal baseline, not here.
+    """
+    if not interest_region or not topic_region:
+        return False
+    a = _region_segments(interest_region)
+    b = _region_segments(topic_region)
+    if not a or not b:
+        return False
+    n = min(len(a), len(b))
+    return a[:n] == b[:n]
+
+
 def relevance_score(topic: Topic, interests: Interests) -> float:
     """Return a 0-1 score for how well ``topic`` matches ``interests``.
 
@@ -79,7 +108,7 @@ def relevance_score(topic: Topic, interests: Interests) -> float:
             score += 0.7 * (len(overlap) / len(topic_tags))
 
     if interests.region and topic.region:
-        if interests.region.strip().lower() == topic.region.strip().lower():
+        if region_matches(interests.region, topic.region):
             score += 0.3
     elif not topic.region:
         # Topic is global in scope — partially relevant to everyone.
@@ -99,11 +128,7 @@ def matches_interests(topic: Topic, interests: Interests) -> bool:
     topic_tags = {t.strip().lower() for t in topic.tags if t.strip()}
     if want_tags and (want_tags & topic_tags):
         return True
-    return bool(
-        interests.region
-        and topic.region
-        and interests.region.strip().lower() == topic.region.strip().lower()
-    )
+    return region_matches(interests.region, topic.region)
 
 
 def urgency_score(topic: Topic, now: datetime | None = None) -> float:

@@ -158,7 +158,7 @@
   .prog .bar { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.4s ease; }
 
   /* ---- Forms ---- */
-  textarea, select, input[type="text"], input[type="datetime-local"] {
+  textarea, select, input[type="text"], input[type="datetime-local"], input[type="number"] {
     width: 100%; background: var(--surface2);
     border: 1px solid var(--border); border-radius: 8px;
     padding: 0.7rem 1rem; color: var(--text);
@@ -219,6 +219,17 @@
   .pill-closing { background: rgba(224,96,144,0.16); color: #e06090; }
   .pill-closed  { background: var(--surface2); color: var(--text2); }
   .pill-active  { background: rgba(108,140,255,0.16); color: var(--accent); }
+  .pill-quorum  { background: rgba(76,175,135,0.16); color: var(--green); }
+
+  /* ---- Quorum progress ---- */
+  .quorum { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.7rem; }
+  .quorum-track {
+    flex: 1; height: 6px; background: var(--border);
+    border-radius: 3px; overflow: hidden;
+  }
+  .quorum-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.5s ease; }
+  .quorum-fill.reached { background: var(--green); }
+  .quorum-text { font-size: 0.72rem; color: var(--text2); white-space: nowrap; }
 
   /* ---- Feed controls ---- */
   .feed-head {
@@ -581,11 +592,15 @@
         </div>
         <div class="field">
           <label for="new-topic-region">Region (optional &mdash; leave blank for everyone)</label>
-          <input type="text" id="new-topic-region" placeholder="e.g. EU-North, US-West, Global">
+          <input type="text" id="new-topic-region" placeholder="e.g. EU/North, US/West — nests hierarchically">
         </div>
         <div class="field">
           <label for="new-topic-deadline">Decision deadline (optional &mdash; drives "closing soon" urgency)</label>
           <input type="datetime-local" id="new-topic-deadline">
+        </div>
+        <div class="field">
+          <label for="new-topic-quorum">Quorum (optional &mdash; how many voices make the decision legitimate)</label>
+          <input type="number" id="new-topic-quorum" min="1" step="1" placeholder="e.g. 50">
         </div>
         <button class="green" onclick="createTopic()">Create Topic</button>
       </div>
@@ -606,7 +621,7 @@
       <div class="interest-chips" id="interest-tags" role="group" aria-label="Topics you care about"></div>
       <div class="field" style="margin-bottom:0; max-width:280px;">
         <label for="interest-region">Your region</label>
-        <input type="text" id="interest-region" placeholder="e.g. EU-North (blank = global)"
+        <input type="text" id="interest-region" placeholder="e.g. EU/North (blank = global)"
                aria-label="Your region" onchange="setRegionInterest(this.value)">
       </div>
     </div>
@@ -1010,10 +1025,62 @@ function normTags(arr) {
   return new Set((arr || []).map(t => String(t).trim().toLowerCase()).filter(Boolean));
 }
 
+// Region paths are hierarchical, separated by "/" — e.g. "EU/North/Sweden".
+// A flat name like "EU-North" is just a one-segment path, so old data still
+// works. Two regions overlap when one path is a prefix of the other: a citizen
+// in EU/North is concerned by an EU-wide issue and by a Sweden-specific one.
+function regionSegments(r) {
+  return String(r || "").split("/").map(s => s.trim().toLowerCase()).filter(Boolean);
+}
+function regionMatches(a, b) {
+  const x = regionSegments(a), y = regionSegments(b);
+  if (!x.length || !y.length) return false;
+  const n = Math.min(x.length, y.length);
+  for (let i = 0; i < n; i++) if (x[i] !== y[i]) return false;
+  return true;
+}
+
 function topicSubmissionCount(topicId) {
   let n = 0;
   for (const [, s] of state.submissions) if (s.topic_id === topicId) n++;
   return n;
+}
+
+// Distinct people who have participated — quorum is about reach across people,
+// not raw volume from a few. Mirrors status.py's participant_count.
+function topicParticipantCount(topicId) {
+  const ids = new Set();
+  for (const [, s] of state.submissions) {
+    if (s.topic_id === topicId) ids.add(s.anonymous_id);
+  }
+  return ids.size;
+}
+
+// Decision milestones for one issue — mirrors
+// src/opendemocracy/participation/status.py.
+function topicStatus(t, now) {
+  now = now || Date.now();
+  const closed = isClosed(t, now);
+  const closing = !closed && urgencyScore(t, now) > 0;
+  const target = (t.quorum && t.quorum > 0) ? t.quorum : null;
+  const count = topicParticipantCount(t.id);
+  const reached = target !== null && count >= target;
+  const fraction = target === null ? null : Math.min(count / target, 1);
+
+  let headline;
+  if (closed) {
+    headline = target !== null
+      ? (reached ? "Closed — quorum reached" : "Closed — quorum not met")
+      : "Closed";
+  } else if (reached) {
+    headline = closing ? "Quorum reached — closing soon" : "Quorum reached";
+  } else if (target !== null) {
+    headline = count + "/" + target + " to quorum" + (closing ? " — closing soon" : "");
+  } else {
+    headline = closing ? "Closing soon" : count + (count === 1 ? " voice" : " voices");
+  }
+
+  return { closed, closing, target, count, reached, fraction, headline };
 }
 
 function topicClosesAt(t) {
@@ -1039,7 +1106,7 @@ function relevanceScore(t) {
     if (overlap) score += 0.7 * (overlap / have.size);
   }
   if (region && tRegion) {
-    if (region === tRegion) score += 0.3;
+    if (regionMatches(region, tRegion)) score += 0.3;
   } else if (!tRegion) {
     score += 0.1; // global-scope topic, partially relevant to all
   }
@@ -1051,9 +1118,7 @@ function matchesInterests(t) {
   const want = normTags(interests.tags);
   const have = normTags(t.tags);
   for (const tag of want) if (have.has(tag)) return true;
-  const region = (interests.region || "").trim().toLowerCase();
-  const tRegion = (t.region || "").trim().toLowerCase();
-  return !!(region && tRegion && region === tRegion);
+  return regionMatches(interests.region, t.region);
 }
 
 function urgencyScore(t, now) {
@@ -1588,6 +1653,8 @@ async function createTopic() {
   const region = document.getElementById("new-topic-region").value.trim();
   const deadline = document.getElementById("new-topic-deadline").value;
   const closesAt = deadline ? new Date(deadline).toISOString() : null;
+  const quorumRaw = parseInt(document.getElementById("new-topic-quorum").value, 10);
+  const quorum = Number.isFinite(quorumRaw) && quorumRaw > 0 ? quorumRaw : null;
 
   const topic = {
     id: generateId(12),
@@ -1600,6 +1667,7 @@ async function createTopic() {
     tags,
     region,
     closes_at: closesAt,
+    quorum,
     created_at: new Date().toISOString(),
   };
 
@@ -1614,6 +1682,7 @@ async function createTopic() {
   document.getElementById("new-topic-tags").value = "";
   document.getElementById("new-topic-region").value = "";
   document.getElementById("new-topic-deadline").value = "";
+  document.getElementById("new-topic-quorum").value = "";
   document.getElementById("create-topic-form").classList.add("hidden");
 
   refreshAll();
@@ -1784,14 +1853,14 @@ function renderTopics() {
   const want = normTags(interests.tags);
   el.innerHTML = topics.map(t => {
     const mine = matchesInterests(t);
-    const closed = isClosed(t, now);
-    const closing = !closed && urgencyScore(t, now) > 0;
+    const st = topicStatus(t, now);
     const subs = topicSubmissionCount(t.id);
 
     const pills = [];
     if (mine) pills.push('<span class="pill pill-foryou">&#9733; For you</span>');
-    if (closed) pills.push('<span class="pill pill-closed">Closed</span>');
-    else if (closing) pills.push('<span class="pill pill-closing">&#9201; ' + esc(timeLeftLabel(t, now)) + '</span>');
+    if (st.closed) pills.push('<span class="pill pill-closed">Closed</span>');
+    else if (st.closing) pills.push('<span class="pill pill-closing">&#9201; ' + esc(timeLeftLabel(t, now)) + '</span>');
+    if (st.reached) pills.push('<span class="pill pill-quorum">&#10003; Quorum</span>');
     if (subs >= 3) pills.push('<span class="pill pill-active">&#128293; Active</span>');
 
     const tagChips = (t.tags || []).map(tag =>
@@ -1799,23 +1868,36 @@ function renderTopics() {
       esc(tag) + '</span>'
     ).join("");
 
+    // Quorum progress bar — shows how close the issue is to a legitimate decision.
+    let quorumHTML = "";
+    if (st.target !== null) {
+      const pct = Math.round(st.fraction * 100);
+      quorumHTML =
+        '<div class="quorum" title="' + st.count + ' of ' + st.target + ' needed">' +
+        '<div class="quorum-track"><div class="quorum-fill' + (st.reached ? ' reached' : '') +
+        '" style="width:' + pct + '%"></div></div>' +
+        '<span class="quorum-text">' + esc(st.headline) + '</span></div>';
+    }
+
     const meta = [];
     meta.push(subs + (subs === 1 ? ' voice' : ' voices'));
     if (t.region) meta.push('&#127758; ' + esc(t.region));
     const tl = timeLeftLabel(t, now);
-    if (tl && !closing && !closed) meta.push(tl);
+    if (tl && !st.closing && !st.closed) meta.push(tl);
 
     return '<div class="card topic' +
       (currentTopic && currentTopic.id === t.id ? ' on' : '') +
       (mine ? ' for-you' : '') +
       '" role="button" tabindex="0"' +
-      ' aria-label="' + esc(t.title) + (mine ? ' (matches your interests)' : '') + '"' +
+      ' aria-label="' + esc(t.title) + (mine ? ' (matches your interests)' : '') +
+      '. ' + esc(st.headline) + '"' +
       ' data-id="' + t.id + '"' +
       ' onclick="openTopic(\'' + t.id + '\')"' +
       ' onkeydown="topicKey(event, \'' + t.id + '\')">' +
       '<h3>' + esc(t.title) + ' ' + pills.join(" ") + '</h3>' +
       '<p class="desc">' + esc(t.description) + '</p>' +
       (tagChips ? '<div class="topic-tags">' + tagChips + '</div>' : '') +
+      quorumHTML +
       '<div class="topic-meta">' + meta.join(' &middot; ') + '</div>' +
       '</div>';
   }).join("");

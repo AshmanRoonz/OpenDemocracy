@@ -41,6 +41,14 @@ can read in the source.
 The composite score is `3·relevance + 2·urgency + 1·activity`. Relevance leads:
 the whole premise is that the issues *you* care about reach *you* first.
 
+On top of ranking, each issue shows **decision milestones** so people can see —
+and reach — the point where an outcome becomes legitimate: progress toward an
+optional **quorum** (counted in distinct participants, not raw submissions),
+whether quorum has been reached, and how that composes with the closing window
+(`"Quorum reached — closing soon"`). Region matching is **hierarchical**: scopes
+are `/`-separated paths, and a citizen is concerned by any issue whose scope
+nests with their own in either direction.
+
 This logic lives in exactly one place per runtime, kept in lockstep:
 
 - **Backend:** [`src/opendemocracy/participation/relevance.py`](src/opendemocracy/participation/relevance.py)
@@ -91,15 +99,21 @@ Both produce identical orderings for identical inputs (covered by
 - [x] "A new issue matters to you" alerts for newly-arriving relevant issues
 - [x] Issue metadata: tags, region, decision deadline
 
+### Now (shipped, second pass)
+- [x] **Hierarchical region matching** — regions are `/`-separated paths
+      (`EU/North/Sweden`); a citizen matches any issue whose scope is a prefix
+      of, or prefixed by, their own. Flat names (`EU-North`) stay valid as
+      one-segment paths.
+- [x] **Decision milestones** — issues carry an optional quorum target; the feed
+      shows progress toward it (`12/50 to quorum`), flags `Quorum reached`, and
+      composes that with the closing window (`Quorum reached — closing soon`).
+      Quorum counts *distinct participants*, not raw submissions.
+
 ### Next
 - [ ] Notifications beyond the open tab (Web Push / opt-in) so "when it matters"
       reaches you even when you're away
-- [ ] Geographic relevance beyond exact-string region match (hierarchies,
-      overlapping jurisdictions)
 - [ ] Learned-but-auditable interest inference from past participation, strictly
       on-device, always overridable
-- [ ] Per-issue "quorum reached" and "decision window closing" milestones in the
-      feed
 - [ ] Digest mode: a periodic, batched summary of what mattered to you, for
       citizens who don't want a live feed
 

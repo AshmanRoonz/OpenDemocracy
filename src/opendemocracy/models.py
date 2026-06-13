@@ -216,6 +216,10 @@ class Topic:
     # optional geographic scope (matching ``Demographics.region`` conventions).
     tags: list[str] = field(default_factory=list)
     region: str | None = None
+    # Optional participation target. When set, the feed shows progress toward
+    # quorum and flags the issue once enough voices have weighed in — so people
+    # can see, and reach, the threshold where a decision becomes legitimate.
+    quorum: int | None = None
 
 
 @dataclass

@@ -54,6 +54,28 @@ def test_region_match_contributes() -> None:
     assert not matches_interests(other, interests)
 
 
+def test_region_hierarchy_matches_broader_and_narrower_scopes() -> None:
+    from opendemocracy.participation.relevance import region_matches
+
+    # Citizen in EU/North is concerned by an EU-wide issue (broader)…
+    assert region_matches("EU/North", "EU")
+    # …and by a Sweden-specific one within their area (narrower).
+    assert region_matches("EU/North", "EU/North/Sweden")
+    # Sibling regions do not match.
+    assert not region_matches("EU/North", "EU/South")
+    assert not region_matches("EU/North", "US/West")
+    # A blank on either side is not a concrete match (handled as global).
+    assert not region_matches("", "EU")
+    assert not region_matches("EU", None)
+
+
+def test_hierarchical_region_drives_relevance_and_alerts() -> None:
+    interests = Interests(region="EU/North")
+    eu_wide = _topic(region="EU")
+    assert relevance_score(eu_wide, interests) > 0.25
+    assert matches_interests(eu_wide, interests)
+
+
 def test_universal_topic_has_baseline_relevance() -> None:
     # No tags, no region: concerns everyone, so it gets a non-zero floor.
     topic = _topic()
