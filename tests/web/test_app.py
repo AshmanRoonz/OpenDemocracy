@@ -8,7 +8,14 @@ import hmac as hmac_mod
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from opendemocracy.web.app import app, registry, submission_store, topic_store
+from opendemocracy.web.app import (
+    app,
+    registry,
+    submission_store,
+    topic_store,
+    vote_ledger,
+)
+from opendemocracy.web.app import propositions as proposition_registry
 
 
 @pytest.fixture(autouse=True)
@@ -18,6 +25,14 @@ def _reset_state() -> None:  # type: ignore[misc]
     registry._pubkey_index.clear()
     submission_store._submissions.clear()
     submission_store._submitted.clear()
+    vote_ledger._events.clear()
+    vote_ledger._current.clear()
+    proposition_registry.history.clear()
+    for t in list(topic_store._topics.values()):
+        if t.id != "demo-ubi":
+            del topic_store._topics[t.id]
+        else:
+            t.proposition_id = None
     # Re-seed the demo topic if it got cleared.
     from opendemocracy.models import Topic
 
@@ -226,3 +241,178 @@ async def test_stats(client: AsyncClient) -> None:
     data = res.json()
     assert "enrolled_participants" in data
     assert "total_submissions" in data
+
+
+async def _enrolled(client: AsyncClient) -> dict[str, str]:
+    res = await client.post("/api/enroll", json={"factors": ["fingerprint", "iris"]})
+    return res.json()  # type: ignore[no-any-return]
+
+
+async def _vote(
+    client: AsyncClient,
+    identity: dict[str, str],
+    choice: str | None,
+    reason: str | None = None,
+    topic_id: str = "demo-ubi",
+):  # type: ignore[no-untyped-def]
+    ch = (
+        await client.post(
+            "/api/challenge", json={"anonymous_id": identity["anonymous_id"]}
+        )
+    ).json()
+    sig = _hmac_sign(identity["public_key"], ch["nonce"])
+    return await client.post(
+        "/api/vote",
+        json={
+            "anonymous_id": identity["anonymous_id"],
+            "challenge_id": ch["challenge_id"],
+            "signature": sig,
+            "topic_id": topic_id,
+            "choice": choice,
+            "reason": reason,
+        },
+    )
+
+
+@pytest.mark.anyio()
+async def test_standing_vote_cast_change_withdraw(client: AsyncClient) -> None:
+    alice = await _enrolled(client)
+    bob = await _enrolled(client)
+
+    res = await _vote(client, alice, "Yes")
+    assert res.status_code == 200
+    assert res.json()["kind"] == "cast"
+
+    await _vote(client, bob, "Yes")
+    res = await _vote(client, alice, "No", reason="the cost report")
+    assert res.json()["kind"] == "changed"
+    assert res.json()["previous"] == "Yes"
+
+    tally = (await client.get("/api/topics/demo-ubi/tally")).json()
+    assert tally["counts"] == {"Yes": 1, "No": 1, "Needs more research": 0}
+    assert tally["standing"] == 2
+    assert tally["ever_participated"] == 2
+    assert tally["changes"] == 1
+
+    res = await _vote(client, bob, None, reason="undecided now")
+    assert res.json()["kind"] == "withdrawn"
+    tally = (await client.get("/api/topics/demo-ubi/tally")).json()
+    assert tally["standing"] == 1
+    assert tally["withdrawn"] == 1
+
+    timeline = (await client.get("/api/topics/demo-ubi/timeline")).json()
+    assert [t["standing"] for t in timeline] == [1, 2, 2, 1]
+
+    moves = (await client.get("/api/topics/demo-ubi/migrations")).json()
+    assert moves[0] == {
+        "from_choice": "Yes",
+        "to_choice": "No",
+        "count": 1,
+        "reasons": ["the cost report"],
+    }
+    assert moves[1]["to_choice"] is None
+
+    stats = (await client.get("/api/stats")).json()
+    assert stats["standing_votes"] == 1
+
+
+@pytest.mark.anyio()
+async def test_standing_vote_rejects_invalid_and_unverified(
+    client: AsyncClient,
+) -> None:
+    alice = await _enrolled(client)
+    res = await _vote(client, alice, "Maybe")
+    assert res.status_code == 400
+    assert "Invalid vote choice" in res.json()["detail"]
+
+    res = await _vote(client, alice, None)
+    assert res.status_code == 400
+    assert "No standing vote" in res.json()["detail"]
+
+    res = await client.post(
+        "/api/vote",
+        json={
+            "anonymous_id": "nobody",
+            "challenge_id": "missing",
+            "signature": "x",
+            "topic_id": "demo-ubi",
+            "choice": "Yes",
+        },
+    )
+    assert res.status_code == 404
+
+    res = await client.get("/api/topics/nope/tally")
+    assert res.status_code == 404
+
+
+@pytest.mark.anyio()
+async def test_attention_names_its_reasons(client: AsyncClient) -> None:
+    from opendemocracy.models import Topic
+
+    topic_store.create(Topic(id="housing-1", title="Rent cap", tags=["housing"]))
+    res = await client.post("/api/attention", json={"tags": ["housing"]})
+    assert res.status_code == 200
+    body = res.json()
+    assert "nobody has asked" in body["agenda_prompt"]
+    ids = {i["topic_id"]: i for i in body["items"]}
+    assert ids["housing-1"]["reasons"] == ["not_yet_heard"]
+    assert "demo-ubi" not in ids  # not relevant, no vote of mine: silence
+
+    # Once I've voted, that reason is gone.
+    alice = await _enrolled(client)
+    await _vote(client, alice, "Yes", topic_id="housing-1")
+    res = await client.post(
+        "/api/attention",
+        json={"tags": ["housing"], "anonymous_id": alice["anonymous_id"]},
+    )
+    assert res.json()["items"] == []
+
+
+@pytest.mark.anyio()
+async def test_propositions_suggest_merge_and_view(client: AsyncClient) -> None:
+    from opendemocracy.models import Topic
+
+    topic_store.create(
+        Topic(
+            id="ban",
+            title="Ban cars from the city centre",
+            tags=["transport"],
+            vote_options=["Yes", "No"],
+        )
+    )
+    topic_store.create(
+        Topic(
+            id="free",
+            title="Make the city centre car-free",
+            tags=["transport"],
+            vote_options=["Yes", "No"],
+        )
+    )
+    sug = (await client.get("/api/propositions/suggestions")).json()
+    assert [(s["topic_a"], s["topic_b"]) for s in sug] == [("ban", "free")]
+    assert "centre" in sug[0]["shared_terms"]
+
+    res = await client.get("/api/topics/ban/proposition")
+    assert res.status_code == 404  # not merged yet
+
+    res = await client.post(
+        "/api/propositions/merge",
+        json={"topic_ids": ["ban", "free"], "reason": "same question"},
+    )
+    assert res.status_code == 200
+    pid = res.json()["proposition_id"]
+
+    alice = await _enrolled(client)
+    await _vote(client, alice, "Yes", topic_id="ban")
+    await _vote(client, alice, "No", topic_id="free")  # latest stance wins in combined
+    view = (await client.get("/api/topics/free/proposition")).json()
+    assert view["proposition_id"] == pid
+    assert [v["topic_id"] for v in view["variants"]] == ["ban", "free"]
+    assert view["combined"]["counts"] == {"Yes": 0, "No": 1}
+    assert view["combined"]["standing"] == 1
+    assert view["framing_matters"] is False
+
+    res = await client.post(
+        "/api/propositions/merge", json={"topic_ids": ["ban", "demo-ubi"]}
+    )
+    assert res.status_code == 400

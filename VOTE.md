@@ -81,6 +81,23 @@ you confirm or override, never a vote cast for you.
   persons or groups as targets. This is a founding rule, not a moderation
   patch.
 
+## Flow, attention, choice
+
+Everything in Vote flows automatically until attention makes part of the flow
+available for choice. Projected preferences and standing votes are the flow —
+they are what make daily participation possible without fatigue. Attention is
+the interruption, and it is only legitimate when it names its cause.
+
+Vote asks two **standard questions**:
+
+| Question | Direction | What it does |
+|---|---|---|
+| **What needs attention?** | System → citizen | Surfaces the issues where flow has stopped being trustworthy *for you*: your own values conflict, your profile can't project, people who stood where you stand are moving, the picture shifted since you chose, the wordings of the question disagree, the window is closing, quorum is near, or it concerns you and you haven't spoken. Each is a named reason with a fixed, readable weight. Silence is a valid answer. |
+| **What needs attention that nobody has asked about yet?** | Citizen → system | The same question turned around is the agenda. Answering it in one line creates a proposition. |
+| **What changed your mind?** | Citizen → everyone | Asked the moment a standing vote changes. Turns changed minds into the most honest measure of an argument. |
+
+One question opens choice, one sets the agenda, one closes the loop.
+
 ## The legitimacy ladder
 
 A voice that is counted and ignored is a poll. Vote is designed to become
@@ -106,9 +123,9 @@ that the people, not the machine, can show they made?**
 Scope of the first release:
 
 - Open proposition creation with AI duplicate-merging and visible framing
-  variants.
+  variants — built (suggestions are transparent and lexical; a human merges).
 - Verified-human, anonymous voting; standing votes with change history and
-  "what changed your mind?"
+  "what changed your mind?" — built.
 - The live issues feed (relevance · urgency · activity) — built.
 - Deterministic tallies with denominator, composition, and full distribution.
 - Quorum and scope milestones — built.
@@ -125,9 +142,10 @@ waits until one community has been heard and answered.
 | Quorum and scoped regions | `participation/topics.py`, `participation/status.py` |
 | Verified, anonymous voters | `identity/` |
 | Preference suggestions, human-confirmed | `participation/preferences.py` · [AI_MEDIATION.md](AI_MEDIATION.md) |
+| What needs attention? / agenda prompt | `participation/attention.py` · `/api/attention` |
 | Full-distribution output | `output/reports.py` |
-| Standing, revocable votes with change history | *next* |
-| Proposition merging and framing variants | *next* |
+| Standing, revocable votes with change history | `participation/votes.py` · `/api/vote`, `/tally`, `/timeline`, `/migrations` |
+| Proposition merging and framing variants | `participation/propositions.py` · `/api/propositions/*`, `/api/topics/{id}/proposition` |
 | Finding snapshots | *next* |
 
 ---

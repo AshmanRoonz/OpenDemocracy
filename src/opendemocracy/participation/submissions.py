@@ -14,8 +14,41 @@ topic, and the content of the submission.
 from __future__ import annotations
 
 from opendemocracy.identity.registry import IdentityRegistry
-from opendemocracy.models import Submission, SubmissionType, VerificationResult
+from opendemocracy.models import (
+    Submission,
+    SubmissionType,
+    Topic,
+    VerificationResult,
+)
 from opendemocracy.participation.topics import TopicStore
+
+
+def check_participant(
+    verification: VerificationResult,
+    identity_registry: IdentityRegistry,
+    topic_store: TopicStore,
+    topic_id: str,
+) -> Topic:
+    """Shared gate for anything a citizen does on a topic.
+
+    Returns the topic when the participant is verified and enrolled and the
+    topic exists and is open. Raises ``PermissionError`` for identity failures
+    and ``ValueError`` for topic problems, so callers can map them uniformly.
+    """
+    if not verification.verified:
+        raise PermissionError(f"Identity verification failed: {verification.reason}")
+
+    if not identity_registry.is_enrolled(verification.anonymous_id):
+        raise PermissionError("Participant is not enrolled or was revoked")
+
+    topic = topic_store.get(topic_id)
+    if topic is None:
+        raise ValueError(f"Topic {topic_id!r} does not exist")
+
+    if not topic_store.is_open(topic_id):
+        raise ValueError(f"Topic {topic_id!r} is closed for submissions")
+
+    return topic
 
 
 class SubmissionStore:
@@ -65,23 +98,9 @@ class SubmissionStore:
             If the topic doesn't exist, is closed, or the participant has
             already submitted this type on this topic.
         """
-        # Must be verified.
-        if not verification.verified:
-            raise PermissionError(
-                f"Identity verification failed: {verification.reason}"
-            )
-
-        # Must be enrolled and active.
-        if not self._identity_registry.is_enrolled(verification.anonymous_id):
-            raise PermissionError("Participant is not enrolled or was revoked")
-
-        # Topic must exist and be open.
-        topic = self._topic_store.get(topic_id)
-        if topic is None:
-            raise ValueError(f"Topic {topic_id!r} does not exist")
-
-        if not self._topic_store.is_open(topic_id):
-            raise ValueError(f"Topic {topic_id!r} is closed for submissions")
+        topic = check_participant(
+            verification, self._identity_registry, self._topic_store, topic_id
+        )
 
         # Check topic allows this submission type.
         type_allowed = {
