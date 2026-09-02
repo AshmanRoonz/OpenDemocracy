@@ -207,6 +207,7 @@ See [PRIOR_ART.md](PRIOR_ART.md) for what Vote takes from each of these, and whe
 - [LiquidFeedback](https://liquidfeedback.com/en/) — Liquid democracy: transitive, revocable delegation and a phased proposal process
 - [Fung, Gilman & Shkabatur, *Six Models for the Internet + Politics*](https://academic.oup.com/isr/article/15/1/30/1792440) — Which digital-democracy models actually arrive
 - [Zama TFHE](https://github.com/brooksdubois/tFHEKotlinExample) — Homomorphic tallying: counting votes the server cannot read
+- [Trystero](https://github.com/dmotz/trystero) and [Rakis](https://github.com/hrishioa/rakis) — Serverless WebRTC signaling, and verified in-browser inference on top of it
 - [Decidim](https://decidim.org/) — Participatory democracy platform
 - [vTaiwan](https://info.vtaiwan.tw/) — Taiwan's digital democracy experiment
 - [Collective Intelligence Project](https://cip.org/) — Research on AI and collective decision-making

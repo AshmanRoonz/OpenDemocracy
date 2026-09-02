@@ -1,6 +1,6 @@
 # Prior Art — Homework for Vote
 
-Four outside sources, read against what Vote has built so far, with concrete
+Five outside sources, read against what Vote has built so far, with concrete
 suggestions and the tensions each one forces. The point is not to copy any of
 them; it is to steal what has already been proven and to know where Vote
 deliberately differs.
@@ -11,6 +11,7 @@ deliberately differs.
 | [Polis](https://pol.is/) | Open-source (AGPL) opinion mapping: agree/disagree/pass on short statements, PCA + k-means opinion groups, group-informed consensus, no replies | The `pass` stance and the no-replies rule. **Not** the groups: Vote counts individuals and never clusters people |
 | [Fung, Gilman & Shkabatur, *Six Models for the Internet + Politics* (2013)](https://academic.oup.com/isr/article/15/1/30/1792440) | Six models of how digital technology could change democracy, with a sober verdict on which are likely | A legitimacy strategy: why the MVP is scoped the way it is |
 | [tFHE Kotlin example](https://github.com/brooksdubois/tFHEKotlinExample) (Zama TFHE) | Demo of encrypted one-hot ballots tallied homomorphically and decrypted by threshold | A way to remove the operator from the trust chain of the tally — and a real tension with reproducibility |
+| [Trystero](https://github.com/dmotz/trystero) and [Rakis](https://github.com/hrishioa/rakis) | Serverless WebRTC signaling (BitTorrent, Nostr, MQTT, IPFS); and a browser-only inference network on top of it with embedding-based verification | Removing the mesh's last central point; and the only place Vote's AI "explain" and "organize" jobs can honestly run — with verification, so an AI sentence is auditable the way a tally is |
 
 ---
 
@@ -169,6 +170,51 @@ The design decision to make now is small: keep the ledger's event type and the
 tally function behind an interface so an encrypted implementation can slot in
 without touching Findings, attention, or propositions.
 
+## 5. Trystero and Rakis — the mesh without a server, and AI inside it
+
+**What they are.** [Trystero](https://github.com/dmotz/trystero) (MIT) makes
+WebRTC connections between browsers with **no signaling server**: peers find
+each other through BitTorrent trackers, Nostr relays (the default), MQTT
+brokers, or IPFS, and session descriptions are encrypted with a key derived
+from the app and room id. [Rakis](https://github.com/hrishioa/rakis) is "a
+permissionless inference network where nodes can accept AI inference
+requests, run local models, verify each other's results and arrive at
+consensus — all in the browser": WebGPU models in the page, redundant P2P
+transports underneath, and an **embedding-based consensus** in which several
+peers run the same request and embedding clusters separate valid results from
+invalid ones — a route to verifiable inference before zero-knowledge ML or
+trusted hardware.
+
+**Suggestions for Vote.**
+
+- **Swap PeerJS signaling for Trystero.** The browser app is "no server"
+  everywhere except peer introduction, which today goes through PeerJS's
+  hosted signaling server — the last thing in the mesh that can be switched
+  off or made to log who talks to whom. Vote's sync protocol (digest, request,
+  sync, and the `votes` G-Set) is transport-agnostic, so this is a contained
+  change with a large trust payoff.
+- **Vote's AI has to live where the ledger lives.** [VOTE.md](VOTE.md) gives
+  the AI three jobs — connect, organize, explain — and forbids it from
+  producing a number or casting a vote. Two of those jobs (semantic
+  duplicate-wording suggestions, plain-language narration of a trend) will
+  eventually want a language model. Run centrally, that model is exactly the
+  owned interpreter Vote refuses to be. Distributed in-browser inference is
+  the only version consistent with the rest of the design.
+- **Verification is the part that matters.** A tally is auditable because
+  every peer replays one ledger and gets one number. A model's sentence is
+  not reproducible that way, so an explanation produced by a single peer is a
+  manipulation surface. Rakis's shape is the right one: fan a request out to
+  several peers, compare results, accept only what a quorum agrees on. That is
+  how an AI-produced sentence becomes auditable in a mesh — and the rule that
+  the AI still never produces a number stays untouched.
+
+**The honest limits.** In-browser inference is heavy (WebGPU, hundreds of
+megabytes of weights) and a civic app must run on an old phone; that argues
+for keeping the model's job small, not for skipping it. And a verified
+explanation is still less inspectable than a readable constant, which is why
+the lexical duplicate-suggestion stays the default until a verified one can
+show its evidence just as plainly.
+
 ---
 
 ## What changes now
@@ -179,16 +225,19 @@ Cheap, in scope, and consistent with everything already built:
 2. **Add `pass`** as a stance distinct from withdraw (Polis).
 3. **Write the no-replies rule into VOTE.md** (Polis).
 4. **Admission quorum** before a topic enters others' attention (LiquidFeedback).
+5. **Trystero for signaling** — remove the mesh's last central point (Trystero).
 
 Next, as their own pieces of work:
 
-5. **Common ground on Findings**, counted over individuals, no clustering
+6. **Common ground on Findings**, counted over individuals, no clustering
    (Polis, minus the groups).
-6. **Delegation**: per-domain, transitive, revocable, beaten by a direct vote,
+7. **Delegation**: per-domain, transitive, revocable, beaten by a direct vote,
    with delegates transparent and citizens anonymous (LiquidFeedback).
-7. **Alternatives with preferential voting** inside a proposition
+8. **Alternatives with preferential voting** inside a proposition
    (LiquidFeedback, Schulze).
-8. **Encrypted ledger** behind the existing interface (TFHE).
+9. **Encrypted ledger** behind the existing interface (TFHE).
+10. **Verified distributed inference** for the explain and organize jobs —
+    several peers, one accepted answer, never a number (Rakis).
 
 And one sentence for the pitch, from Fung: Vote earns the right to be direct
 democracy by first being undeniable evidence.
