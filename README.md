@@ -130,8 +130,11 @@ Prioritizes raw signal over curated narratives. Designed to resist capture by an
   suggested transparently and merged by a human; every wording keeps its own
   tally, the combined tally counts people once, and how far the wordings
   disagree is a first-class number. See [VOTE.md](VOTE.md).
-- [ ] **Vote MVP:** one community, one real decision — exportable findings
-  on top of standing votes and propositions. See [VOTE.md](VOTE.md).
+- [x] **Findings:** freeze an issue into a citable record — tally with
+  denominator, ladder rung, wordings, what moved people — hashed and
+  reproducible from the ledger by anyone, exported as JSON or Markdown.
+- [ ] **Vote MVP pilot:** the code is built; find one community and one real
+  decision willing to ride on it. See [VOTE.md](VOTE.md).
 
 ### Phase 3: Deliberative Integration
 - [ ] Partner with [Polis](https://pol.is/)-style deliberative tools

@@ -6,12 +6,16 @@ from opendemocracy.processing.sentiment import score_opinion, score_opinions
 
 class TestScoreOpinion:
     def test_pro_text_positive_stance(self) -> None:
-        op = Opinion(text="I strongly support UBI, it would benefit everyone and help the economy")
+        op = Opinion(
+            text="I strongly support UBI, it would benefit everyone and help the economy"
+        )
         score_opinion(op)
         assert op.sentiment_scores["stance"] > 0
 
     def test_anti_text_negative_stance(self) -> None:
-        op = Opinion(text="I oppose UBI, it would be harmful and a terrible waste of money")
+        op = Opinion(
+            text="I oppose UBI, it would be harmful and a terrible waste of money"
+        )
         score_opinion(op)
         assert op.sentiment_scores["stance"] < 0
 

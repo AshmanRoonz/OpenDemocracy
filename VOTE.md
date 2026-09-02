@@ -108,7 +108,7 @@ undeniable, step by step:
 | **Signal** | Anyone opens it; votes flow. Raw, exploratory, visible. |
 | **Quorum** | Enough distinct verified participants have weighed in (quorum milestones are already built). |
 | **Scoped** | The issue is tied to a region or community, and participation reflects the people actually in it. |
-| **Finding** | An auditable, exportable snapshot — denominator, composition, distribution, method — that a council, board, or assembly cannot wave off as bot noise. |
+| **Finding** | An auditable, exportable snapshot — denominator, composition, distribution, wordings, what moved people, method — carrying a content hash and re-derivable from the ledger by anyone. A council, board, or assembly cannot wave it off as bot noise. Below quorum it exports as *signal only*. |
 | **Bound** | A real body has committed in advance to act on findings above a threshold. |
 
 Democracy at national scale is won by being undeniable at small scale first.
@@ -129,10 +129,13 @@ Scope of the first release:
 - The live issues feed (relevance · urgency · activity) — built.
 - Deterministic tallies with denominator, composition, and full distribution.
 - Quorum and scope milestones — built.
-- Exportable *Finding* snapshots.
+- Exportable *Finding* snapshots — built (hashed, reproducible from the
+  ledger, JSON and Markdown).
 
-Everything else — delegation, consequence modeling, cross-community scale —
-waits until one community has been heard and answered.
+Every item above is built. What remains is not code: **a community, and a
+real decision willing to ride on it.** Everything else — delegation,
+consequence modeling, cross-community scale — waits until one community has
+been heard and answered.
 
 ## How this maps to the codebase
 
@@ -146,7 +149,7 @@ waits until one community has been heard and answered.
 | Full-distribution output | `output/reports.py` |
 | Standing, revocable votes with change history | `participation/votes.py` · `/api/vote`, `/tally`, `/timeline`, `/migrations` |
 | Proposition merging and framing variants | `participation/propositions.py` · `/api/propositions/*`, `/api/topics/{id}/proposition` |
-| Finding snapshots | *next* |
+| Finding snapshots | `participation/findings.py` · `/api/topics/{id}/findings`, `/api/findings/{id}[/markdown|/check]` |
 
 ---
 
