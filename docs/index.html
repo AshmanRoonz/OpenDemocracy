@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenDemocracy — Peer-to-Peer</title>
+<title>OpenDemocracy — Vote</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -375,6 +375,13 @@
     font-weight: 500;
   }
   /* Cluster cards */
+  .peer-dot.wait { background: var(--orange); }
+  .relay-list { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; }
+  .relay { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; }
+  .relay-url { font-family: ui-monospace, monospace; color: var(--text2); }
+  .relay-add { display: flex; gap: 0.4rem; margin-top: 0.5rem; max-width: 420px; }
+  .relay-add input { flex: 1; font-size: 0.82rem; }
+  button.tiny { padding: 0 0.4rem; font-size: 0.8rem; line-height: 1.4; }
   .attention { border-left: 3px solid var(--accent); }
   .attention .reasons { margin: 0.4rem 0 0; padding-left: 1.1rem; font-size: 0.85rem; color: var(--text2); }
   .attention .reasons li { margin-bottom: 0.2rem; }
@@ -463,11 +470,11 @@
 <!-- HEADER                                                           -->
 <!-- ================================================================ -->
 <header>
-  <div class="logo"><span>Open</span>Democracy<small>P2P</small></div>
+  <div class="logo"><span>Open</span>Democracy<small>Vote</small></div>
   <div class="header-stats">
-    <span><span class="peer-dot" id="net-dot"></span> Peers: <strong id="st-peers">0</strong></span>
+    <span><span class="peer-dot off" id="net-dot"></span> Relays: <strong id="st-peers">0/0</strong></span>
     <span>Verified: <strong id="st-enrolled">0</strong></span>
-    <span>Submissions: <strong id="st-subs">0</strong></span>
+    <span>Records: <strong id="st-subs">0</strong></span>
     <span title="IndexedDB persistence" id="st-storage">Storage: <strong>--</strong></span>
   </div>
 </header>
@@ -479,8 +486,8 @@
   <!-- ============================================================== -->
   <div class="hero">
     <h2>Anyone can vote for anything, <em>at any time.</em></h2>
-    <p>Your vote stands until you change it. Every browser is the server; every number is a count of
-       verified individuals. One global mesh — open it, and your voice joins the record.</p>
+    <p>Your vote stands until you change it. Every browser verifies the whole record; every number is a
+       count of verified individuals. Relays only carry &mdash; open the page, and your voice joins the record.</p>
   </div>
 
   <!-- ============================================================== -->
@@ -491,7 +498,7 @@
       <div class="step">
         <div class="num">1</div>
         <h3>Open the page</h3>
-        <p>Your browser joins the global mesh automatically.</p>
+        <p>Your browser reads the record from public relays. Anyone can run one.</p>
       </div>
       <div class="step">
         <div class="num">2</div>
@@ -519,10 +526,14 @@
   <!-- ============================================================== -->
   <section id="sec-room">
     <div id="room-info" class="room-banner">
-      <div>
-        <div style="font-size:0.82rem; color:var(--text2);">Network</div>
-        <div class="room-id" id="room-id-display">Connecting...</div>
-        <div class="room-meta" id="room-meta">Joining the global mesh</div>
+      <div style="flex:1; min-width:260px;">
+        <div style="font-size:0.82rem; color:var(--text2);">Relays &mdash; no server you have to trust, no single one you depend on</div>
+        <div class="room-meta" id="room-meta">Connecting&hellip;</div>
+        <div class="relay-list" id="relay-list"></div>
+        <div class="relay-add">
+          <input type="text" id="relay-input" placeholder="wss://your-community.relay" aria-label="Add a relay">
+          <button class="small secondary" onclick="addRelay()">Add relay</button>
+        </div>
       </div>
       <div class="room-actions">
         <button class="small secondary" onclick="copyLink()">Share link</button>
@@ -774,25 +785,27 @@
   <!-- ============================================================== -->
   <div class="privacy" id="sec-privacy">
     <strong>How your data is protected:</strong>
-    Biometric scans are processed on your device only. A cryptographic key
-    is generated locally and the public half is shared with peers so they can
-    verify your submissions. All data is replicated across every connected browser
-    in a single global mesh — there is no central server to hack, shut down, or
-    censor. If any peer goes offline, the remaining network still holds the
-    complete record. One key per person means one vote per person.
+    Biometric scans are processed on your device only. A cryptographic key pair
+    is generated locally; the secret half never leaves this browser and the
+    public half <em>is</em> your anonymous id. Every record you make &mdash; an
+    enrollment, a question, an opinion, a standing vote &mdash; is an event
+    signed with that key. One key per person means one vote per person.
     <br><br>
-    <strong>Durable storage:</strong>
-    All replicated data (enrollments, topics, submissions, votes) is persisted to
-    IndexedDB on your device. When you reopen the page — even after closing
-    the browser — your node rehydrates from local storage and shares what
-    it knows with peers. Data propagation uses G-Set CRDTs (grow-only sets)
-    with set-union merge, so there are no conflicts.
+    <strong>Relays carry; browsers verify:</strong>
+    Records travel through Nostr relays &mdash; plain, interchangeable servers
+    that store signed events and serve them back by filter. There is no relay
+    you have to trust: your browser verifies every signature itself, and no
+    single relay is depended on &mdash; the page reads from several, you can
+    add your own, and a community can run one for itself. What a relay can see
+    is what every reader can see: which anonymous key posted which record, and
+    when.
     <br><br>
-    <strong>Standing votes:</strong>
-    A vote is a signed, append-only ledger event. Changing or withdrawing it
-    appends another; nothing is ever overwritten. Every peer replays the same
-    ledger, so the tally, the timeline, and a Finding's hash are the same in
-    every browser &mdash; and in the Python backend.
+    <strong>Durable, everywhere:</strong>
+    Everything is persisted to IndexedDB on your device and re-published from
+    your outbox whenever you connect, so a relay that was down catches up. The
+    record outlives every open tab. Data is a grow-only set keyed by event id:
+    append-only, no conflicts, and order is derived at replay, never trusted
+    from arrival.
     <br><br>
     <strong>Local processing, no groups:</strong>
     Sentiment scoring and bias detection run locally in your browser. Nothing
@@ -802,51 +815,32 @@
 </div>
 
 <footer>
-  OpenDemocracy &mdash; one global mesh, no server, no censorship, no single point of failure
+  OpenDemocracy &mdash; carried by relays, verified by every browser, owned by no one
   &middot; <a href="https://github.com/AshmanRoonz/OpenDemocracy" target="_blank">GitHub</a>
 </footer>
 
-<!-- PeerJS for WebRTC signaling -->
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<!-- nostr-tools: Schnorr signing, event verification, relay pool -->
+<script src="https://unpkg.com/nostr-tools@2.10.4/lib/nostr.bundle.js"></script>
 
 <script>
 /* ==================================================================
-   OpenDemocracy — Peer-to-Peer Edition with Persistent Storage
+   OpenDemocracy — Vote, carried by Nostr relays
    ==================================================================
    Architecture:
-   - Every browser is both client AND server
-   - WebRTC data channels (via PeerJS) connect peers directly
-   - Full mesh: every peer connects to every other peer
-   - State (enrollments, topics, submissions) replicated via gossip
-   - Each peer independently verifies all cryptographic signatures
-   - No central server — host on GitHub Pages, open from file://, anywhere
-   -
-   - PERSISTENCE (Phase 3):
-   -   Data model: G-Set CRDTs (grow-only sets). Enrollments, topics,
-   -   and submissions are append-only, keyed by unique IDs. The merge
-   -   operation is set union — commutative, associative, idempotent.
-   -   No conflicts possible.
-   -
-   -   Storage: IndexedDB for durable local persistence. Every mutation
-   -   is written through to IndexedDB so state survives tab close,
-   -   browser restart, and offline periods.
-   -
-   -   Sync: On peer connect, nodes exchange a compact state digest
-   -   (counts per collection). If digests differ, only the missing
-   -   entries are transmitted (anti-entropy). Real-time mutations
-   -   still propagate via gossip broadcast.
-   -
-   -   Eviction: The seen-set (message dedup) is capped at 10,000
-   -   entries with LRU eviction. Topics can be archived after a
-   -   configurable age. Storage usage is monitored and displayed.
-   -
-   -   Why not IPFS/libp2p? Too heavy for Phase 3 — adds ~400KB of
-   -   JS dependencies, requires DHT bootstrap nodes, and the data
-   -   volumes here (text submissions) don't warrant content-addressed
-   -   blob storage yet. IndexedDB + gossip gives us durable, offline-
-   -   capable persistence with zero extra dependencies. IPFS is the
-   -   right move for Phase 4 (planetary scale) when we need cross-
-   -   room persistence and archival pinning.
+   - Every record (enrollment, topic, submission, standing vote) is a
+     signed Nostr event. Relays are dumb replicated storage: they carry
+     and serve events; they verify nothing you don't verify yourself.
+   - Every browser verifies every signature, maps events to records,
+     replays the standing-vote ledger, and computes the same numbers.
+   - No server you have to trust, no single one you depend on: the page
+     talks to a list of public relays anyone can extend or self-host.
+     The ledger outlives every open tab.
+   - State persists in IndexedDB; your own events sit in an outbox and
+     are re-published on every connect, so a relay that was down catches
+     up and a relay that drops an event is corrected by the others.
+   - Data model is a G-Set: append-only, keyed by event id, merge is set
+     union. Order is derived at replay (created_at, id), never trusted
+     from arrival.
    ================================================================== */
 
 /* ==================================================================
@@ -854,8 +848,8 @@
    ================================================================== */
 
 const DB_NAME = "opendemocracy_p2p";
-const DB_VERSION = 2;
-const STORES = ["enrollments", "topics", "submissions", "votes", "seen", "meta"];
+const DB_VERSION = 3;
+const STORES = ["enrollments", "topics", "submissions", "votes", "events", "outbox", "seen", "meta"];
 
 const store = {
   db: null,
@@ -972,82 +966,31 @@ const store = {
     const t = await store.count("topics");
     const s = await store.count("submissions");
     const v = await store.count("votes");
-    return { used: (e + t + s + v) * 500, quota: 0, entries: e + t + s + v }; // rough estimate
+    return { used: (e + t + s + v) * 700, quota: 0, entries: e + t + s + v }; // rough estimate
   },
 };
 
 /* ==================================================================
-   SEEN-SET WITH LRU EVICTION
-   ================================================================== */
-
-const SEEN_MAX = 10000;
-
-const seenSet = {
-  // Ordered map: msgId -> timestamp. Oldest entries evicted first.
-  _map: new Map(),
-
-  has(msgId) {
-    return seenSet._map.has(msgId);
-  },
-
-  add(msgId) {
-    if (seenSet._map.has(msgId)) return;
-    seenSet._map.set(msgId, Date.now());
-    // Evict oldest if over capacity
-    if (seenSet._map.size > SEEN_MAX) {
-      const oldest = seenSet._map.keys().next().value;
-      seenSet._map.delete(oldest);
-      store.del("seen", oldest);
-    }
-    // Persist (fire-and-forget)
-    store.put("seen", msgId, Date.now());
-  },
-
-  get size() {
-    return seenSet._map.size;
-  },
-
-  // Load from IndexedDB on boot
-  async load() {
-    const pairs = await store.getAll("seen");
-    // Sort by timestamp ascending so oldest are first in map
-    pairs.sort((a, b) => a[1] - b[1]);
-    for (const [key, ts] of pairs) {
-      seenSet._map.set(key, ts);
-    }
-    // Trim if DB had more than the cap
-    while (seenSet._map.size > SEEN_MAX) {
-      const oldest = seenSet._map.keys().next().value;
-      seenSet._map.delete(oldest);
-      store.del("seen", oldest);
-    }
-  },
-};
-
-/* ==================================================================
-   P2P STATE
+   STATE
    ================================================================== */
 
 const state = {
-  roomId: null,
-  isHost: false,
-  myPeerId: null,
-  peer: null,              // PeerJS instance
-  connections: new Map(),  // peerId -> DataConnection
-  peerList: [],            // known peer IDs
-
-  // Replicated data (same on every peer) — G-Set CRDTs
-  enrollments: new Map(),  // anonymous_id -> { public_key, factors, enrolled_at }
-  topics: new Map(),       // topic_id -> { id, title, description, ... }
-  submissions: new Map(),  // submission_id -> { id, topic_id, anonymous_id, type, content, signature, ... }
-  votes: new Map(),        // event_id -> standing-vote ledger event (append-only; see VOTE ENGINE)
+  // Replicated data (same in every browser) — G-Set, keyed by event id
+  enrollments: new Map(),  // pubkey -> { public_key, factors, enrolled_at }
+  topics: new Map(),       // topic event id -> { id, title, description, ... }
+  submissions: new Map(),  // event id -> { id, topic_id, anonymous_id, submission_type, content, ... }
+  votes: new Map(),        // event id -> standing-vote ledger event (append-only; see VOTE ENGINE)
+  events: new Map(),       // event id -> raw signed Nostr event (for re-verification)
+  sinceSec: 0,             // newest created_at we hold — relay backfill starts a little before it
 
   // Persistence flag
   dbReady: false,
 };
 
-/* ---- Local identity (only on this browser) ---- */
-let me = JSON.parse(localStorage.getItem("od_p2p_me") || "null");
+/* ---- Local identity (only on this browser) ----
+   The secret key never leaves this browser. The public key IS the
+   anonymous id: a Nostr pubkey that signs every record you make. */
+let me = JSON.parse(localStorage.getItem("od_nostr_me") || "null");
 let selectedFactors = [];
 let currentTopic = null;
 let currentTab = "opinion";
@@ -1469,106 +1412,30 @@ function findingMarkdown(p, hash, note) {
    STATE HELPERS (write-through to IndexedDB)
    ================================================================== */
 
-async function addEnrollment(id, data) {
-  if (state.enrollments.has(id)) return false;
-  state.enrollments.set(id, data);
-  await store.put("enrollments", id, data);
-  return true;
-}
-
-async function addTopic(id, data) {
-  if (state.topics.has(id)) return false;
-  state.topics.set(id, data);
-  await store.put("topics", id, data);
-  return true;
-}
-
-async function addSubmission(id, data) {
-  if (state.submissions.has(id)) return false;
-  state.submissions.set(id, data);
-  await store.put("submissions", id, data);
-  return true;
-}
-
-async function addVote(id, data) {
-  if (state.votes.has(id)) return false;
-  state.votes.set(id, data);
-  await store.put("votes", id, data);
-  return true;
-}
-
 // Rehydrate in-memory state from IndexedDB
 async function rehydrate() {
-  const [enrollments, topics, submissions, votes] = await Promise.all([
+  const [enrollments, topics, submissions, votes, events, since] = await Promise.all([
     store.getAll("enrollments"),
     store.getAll("topics"),
     store.getAll("submissions"),
     store.getAll("votes"),
-    seenSet.load(),
+    store.getAll("events"),
+    store.get("meta", "since"),
   ]);
-
   let loaded = 0;
-  for (const [id, data] of enrollments) {
-    state.enrollments.set(id, data);
-    loaded++;
-  }
-  for (const [id, data] of topics) {
-    state.topics.set(id, data);
-    loaded++;
-  }
-  for (const [id, data] of submissions) {
-    state.submissions.set(id, data);
-    loaded++;
-  }
-  for (const [id, data] of votes) {
-    state.votes.set(id, data);
-    loaded++;
-  }
-
+  for (const [id, data] of enrollments) { state.enrollments.set(id, data); loaded++; }
+  for (const [id, data] of topics) { state.topics.set(id, data); loaded++; }
+  for (const [id, data] of submissions) { state.submissions.set(id, data); loaded++; }
+  for (const [id, data] of votes) { state.votes.set(id, data); loaded++; }
+  for (const [id, data] of events) state.events.set(id, data);
+  state.sinceSec = Number(since) || 0;
   state.dbReady = true;
   return loaded;
 }
 
-// Build a compact digest of our state for anti-entropy sync
-function stateDigest() {
-  return {
-    enrollmentIds: [...state.enrollments.keys()],
-    topicIds: [...state.topics.keys()],
-    submissionIds: [...state.submissions.keys()],
-    voteIds: [...state.votes.keys()],
-  };
-}
-
 /* ==================================================================
-   CRYPTO (all in-browser via Web Crypto API)
+   HELPERS
    ================================================================== */
-
-async function generateKeypair() {
-  // Generate HMAC key for signing (prototype — production would use Ed25519)
-  const rawKey = new Uint8Array(32);
-  crypto.getRandomValues(rawKey);
-  const privateKey = bytesToHex(rawKey);
-  const publicKey = bytesToHex(new Uint8Array(
-    await crypto.subtle.digest("SHA-256", rawKey)
-  ));
-  return { privateKey, publicKey };
-}
-
-async function signMessage(publicKey, message) {
-  // HMAC-SHA256 sign using public key (matches the server prototype's scheme)
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw", enc.encode(publicKey),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
-  return bytesToHex(new Uint8Array(sig));
-}
-
-async function verifySignature(publicKey, message, signature) {
-  const expected = await signMessage(publicKey, message);
-  return expected === signature;
-}
 
 function generateId(len = 12) {
   const arr = new Uint8Array(len);
@@ -1581,412 +1448,314 @@ function bytesToHex(bytes) {
 }
 
 /* ==================================================================
-   GLOBAL MESH — single network, auto-join
-   ==================================================================
-   There's one mesh for all of OpenDemocracy. No rooms, no codes.
-   Under the hood, one PeerJS ID ("od-global-hub") acts as the
-   initial rendezvous point. If that ID is already taken (someone
-   else is the hub), we join as a regular peer and connect to them.
-   Once connected, all peers share their known peer lists and the
-   mesh self-heals — the hub is just the entry point, not a single
-   point of failure.
+   NOSTR MAPPING (pure)
+   ------------------------------------------------------------------
+   Vote's records ARE Nostr events. A ledger event is already a signed,
+   append-only, replayable record with an anonymous key behind it — which
+   is exactly what a Nostr event is. Relays are dumb replicated storage:
+   they accept signed events, serve them by filter, and verify nothing
+   you don't verify yourself. Every browser still verifies every
+   signature and replays the ledger itself; relays only carry.
+
+   This block is pure (no DOM, no network) and is exercised under node
+   by tests/participation/test_browser_nostr.py.
    ================================================================== */
+/* === NOSTR MAPPING START === */
 
-const GLOBAL_HUB_ID = "od-global-hub";
+const APP_TAG = "opendemocracy";
+// Regular (stored) kinds in the 1000–9999 range. One kind per record type.
+const KIND_ENROLL = 1401;
+const KIND_TOPIC = 1402;
+const KIND_SUBMISSION = 1403;
+const KIND_VOTE = 1404;
+const ALL_KINDS = [KIND_ENROLL, KIND_TOPIC, KIND_SUBMISSION, KIND_VOTE];
 
-function joinGlobalMesh() {
-  state.roomId = "global";
-  // Try to become the hub first. If the ID is taken, join as a peer.
-  state.isHost = true;
-  initPeer(GLOBAL_HUB_ID);
+// Public relays anyone can read from and publish to. A community piloting
+// Vote can add its own — it stays readable by every other relay's users.
+const DEFAULT_RELAYS = [
+  "wss://relay.damus.io",
+  "wss://nos.lol",
+  "wss://relay.primal.net",
+  "wss://relay.nostr.band",
+];
+
+function nowSec() { return Math.floor(Date.now() / 1000); }
+function secToIso(sec) { return new Date(sec * 1000).toISOString(); }
+function tagValue(ev, name) {
+  const t = (ev.tags || []).find(x => x[0] === name);
+  return t ? t[1] : undefined;
 }
 
-function initPeer(peerId) {
-  const opts = { debug: 0 };
-  state.peer = peerId ? new Peer(peerId, opts) : new Peer(opts);
+/* ---- Builders: unsigned event templates ---- */
 
-  state.peer.on("open", (id) => {
-    state.myPeerId = id;
-    netLog("Connected as: " + id, "ok");
-    document.getElementById("room-id-display").textContent = "Global Mesh";
-    document.getElementById("room-meta").textContent =
-      (id === GLOBAL_HUB_ID)
-        ? "You are the hub node (entry point for new peers)"
-        : "Connected — " + id.slice(0, 8) + "...";
-
-    showRoomUI();
-
-    // If we're not the hub, connect to the hub to bootstrap
-    if (id !== GLOBAL_HUB_ID) {
-      connectToPeer(GLOBAL_HUB_ID);
-    }
-  });
-
-  state.peer.on("connection", (conn) => {
-    setupConnection(conn);
-  });
-
-  state.peer.on("error", (err) => {
-    if (err.type === "unavailable-id") {
-      // Hub ID already taken — good, join as a regular peer
-      netLog("Hub exists, joining as peer...", "ok");
-      state.isHost = false;
-      initPeer(null); // random ID, then connect to hub
-    } else if (err.type === "peer-unavailable") {
-      netLog("Hub offline. You are the only node — others will connect to you.", "warn");
-      document.getElementById("room-meta").textContent = "Standalone — waiting for peers";
-    } else {
-      netLog("Error: " + err.type + " — " + err.message, "err");
-    }
-  });
+function buildEnrollEvent(factors) {
+  return {
+    kind: KIND_ENROLL, created_at: nowSec(),
+    tags: [["t", APP_TAG]],
+    content: JSON.stringify({ factors }),
+  };
 }
 
-function connectToPeer(peerId) {
-  if (peerId === state.myPeerId) return;
-  if (state.connections.has(peerId)) return;
-
-  netLog("Connecting to " + peerId + "...");
-  const conn = state.peer.connect(peerId, { reliable: true });
-  setupConnection(conn);
+function buildTopicEvent(topic) {
+  const { id, created_at, ...body } = topic; // id is the event id, assigned on signing
+  return {
+    kind: KIND_TOPIC, created_at: nowSec(),
+    tags: [["t", APP_TAG]].concat((topic.tags || []).map(tag => ["t", String(tag).toLowerCase()])),
+    content: JSON.stringify(body),
+  };
 }
 
-function setupConnection(conn) {
-  conn.on("open", () => {
-    state.connections.set(conn.peer, conn);
-    netLog("Peer connected: " + conn.peer, "ok");
-    updateStats();
-
-    // Anti-entropy: send our digest first. The peer compares and requests
-    // only the entries it's missing. Falls back to full sync if the peer
-    // doesn't support digests (backwards compatible).
-    conn.send({
-      type: "digest",
-      msgId: generateId(),
-      digest: stateDigest(),
-      peerList: [...state.connections.keys(), state.myPeerId],
-    });
-  });
-
-  conn.on("data", (data) => handleMessage(data, conn.peer));
-
-  conn.on("close", () => {
-    state.connections.delete(conn.peer);
-    netLog("Peer disconnected: " + conn.peer, "warn");
-    updateStats();
-  });
-
-  conn.on("error", (err) => {
-    netLog("Connection error with " + conn.peer + ": " + err, "err");
-  });
+function buildSubmissionEvent(topicId, submissionType, content) {
+  return {
+    kind: KIND_SUBMISSION, created_at: nowSec(),
+    tags: [["t", APP_TAG], ["e", topicId]],
+    content: JSON.stringify({ submission_type: submissionType, content }),
+  };
 }
+
+// choice === null withdraws. `previous` and `kind` are never carried on the
+// wire: they are derived at replay from the ledger order.
+function buildVoteEvent(topicId, choice, reason) {
+  return {
+    kind: KIND_VOTE, created_at: nowSec(),
+    tags: [["t", APP_TAG], ["e", topicId]],
+    content: JSON.stringify({ choice, reason: reason || null }),
+  };
+}
+
+/* ---- Mapping: a verified event -> a local record, or null ---- */
+
+function parseContent(ev) {
+  try { const v = JSON.parse(ev.content); return v && typeof v === "object" ? v : null; }
+  catch (e) { return null; }
+}
+
+// Returns { store, id, record } for a well-formed app event, else null.
+// Only shape is checked here; cross-record validity is `recordValid`.
+function eventToRecord(ev) {
+  if (!ev || typeof ev.id !== "string" || typeof ev.pubkey !== "string") return null;
+  if (!ALL_KINDS.includes(ev.kind) || tagValue(ev, "t") !== APP_TAG) return null;
+  const body = parseContent(ev);
+  if (!body) return null;
+  const at = secToIso(ev.created_at);
+
+  if (ev.kind === KIND_ENROLL) {
+    if (!Array.isArray(body.factors) || body.factors.length < 2) return null;
+    return { store: "enrollments", id: ev.pubkey, record: {
+      public_key: ev.pubkey, factors: body.factors.map(String), enrolled_at: at, event_id: ev.id } };
+  }
+  if (ev.kind === KIND_TOPIC) {
+    if (typeof body.title !== "string" || !body.title.trim()) return null;
+    const opts = Array.isArray(body.vote_options) ? body.vote_options.map(String) : [];
+    return { store: "topics", id: ev.id, record: {
+      id: ev.id, title: body.title, description: String(body.description || ""),
+      allow_opinions: body.allow_opinions !== false, allow_ideas: body.allow_ideas !== false,
+      allow_votes: !!body.allow_votes && opts.length > 0, vote_options: opts,
+      tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+      region: body.region ? String(body.region) : "",
+      closes_at: body.closes_at || null,
+      quorum: Number.isFinite(body.quorum) && body.quorum > 0 ? Math.floor(body.quorum) : null,
+      created_at: at, created_by: ev.pubkey } };
+  }
+  const topicId = tagValue(ev, "e");
+  if (!topicId) return null;
+  if (ev.kind === KIND_SUBMISSION) {
+    if (!["opinion", "idea"].includes(body.submission_type)) return null;
+    if (typeof body.content !== "string" || !body.content.trim()) return null;
+    return { store: "submissions", id: ev.id, record: {
+      id: ev.id, topic_id: topicId, anonymous_id: ev.pubkey,
+      submission_type: body.submission_type, content: body.content, submitted_at: at } };
+  }
+  if (ev.kind === KIND_VOTE) {
+    if (!(body.choice === null || typeof body.choice === "string")) return null;
+    return { store: "votes", id: ev.id, record: {
+      id: ev.id, topic_id: topicId, anonymous_id: ev.pubkey,
+      choice: body.choice, reason: typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : null,
+      at } };
+  }
+  return null;
+}
+
+// Cross-record checks against what we already hold. Returns "ok", or the
+// name of the missing dependency ("enrollment" | "topic") so the caller can
+// park the record until it arrives, or "invalid" when it can never be valid.
+function recordValid(mapped, lookups) {
+  const { store, record } = mapped;
+  if (store === "enrollments" || store === "topics") return "ok";
+  if (!lookups.enrollments.has(record.anonymous_id)) return "enrollment";
+  const topic = lookups.topics.get(record.topic_id);
+  if (!topic) return "topic";
+  if (store === "submissions") {
+    if (record.submission_type === "opinion" && !topic.allow_opinions) return "invalid";
+    if (record.submission_type === "idea" && !topic.allow_ideas) return "invalid";
+    return "ok";
+  }
+  if (store === "votes") {
+    if (!topic.allow_votes) return "invalid";
+    if (record.choice !== null && topic.vote_options.length && !topic.vote_options.includes(record.choice)) return "invalid";
+    return "ok";
+  }
+  return "invalid";
+}
+/* === NOSTR MAPPING END === */
 
 /* ==================================================================
-   GOSSIP PROTOCOL (with anti-entropy sync)
+   RELAY TRANSPORT — Nostr relays carry; every browser verifies
+   ==================================================================
+   There is no server you have to trust and no single one you depend
+   on. The page subscribes to every relay in its list, verifies each
+   event's signature locally, maps it to a record, and stores it. Your
+   own events are kept in an outbox and re-published on every connect,
+   so a relay that was down catches up, and a relay that drops an event
+   is corrected by the others. The ledger outlives every open tab.
    ================================================================== */
 
-function broadcast(msg) {
-  // Tag every message with a unique ID for dedup
-  if (!msg.msgId) msg.msgId = generateId(16);
-  seenSet.add(msg.msgId);
+const RELAY_KEY = "od_relays";
+let relays = JSON.parse(localStorage.getItem(RELAY_KEY) || "null") || DEFAULT_RELAYS.slice();
+const relayStatus = new Map(); // url -> "connecting" | "ok" | "off"
+let pool = null;
+let liveSub = null;
+// Records that failed only because a dependency (enrollment/topic) hasn't
+// arrived yet. Relays make no ordering promise, so we park and retry.
+let pending = [];
 
-  for (const [, conn] of state.connections) {
-    try { conn.send(msg); } catch (_) { /* peer may have disconnected */ }
-  }
+function nostrReady() {
+  return typeof NostrTools !== "undefined" && NostrTools && NostrTools.SimplePool;
 }
 
-async function handleMessage(msg, fromPeer) {
-  // Dedup: ignore messages we've already seen
-  if (msg.msgId && seenSet.has(msg.msgId)) return;
-  if (msg.msgId) seenSet.add(msg.msgId);
-
-  switch (msg.type) {
-    case "digest":
-      await handleDigest(msg, fromPeer);
-      break;
-    case "digest-request":
-      await handleDigestRequest(msg, fromPeer);
-      break;
-    case "sync":
-      await handleSync(msg, fromPeer);
-      break;
-    case "enroll":
-      await handleEnrollMsg(msg);
-      break;
-    case "topic":
-      await handleTopicMsg(msg);
-      break;
-    case "submit":
-      await handleSubmitMsg(msg);
-      break;
-    case "vote":
-      await handleVoteMsg(msg);
-      break;
-  }
+function setRelayStatus(url, status) {
+  relayStatus.set(url, status);
+  renderRelays();
+  updateStats();
 }
 
-// Anti-entropy: receive a peer's digest and compute what they need
-async function handleDigest(msg, fromPeer) {
-  netLog("Digest from " + fromPeer + " — comparing state", "ok");
-  const remote = msg.digest;
-  const remoteEnrollIds = new Set(remote.enrollmentIds);
-  const remoteTopicIds = new Set(remote.topicIds);
-  const remoteSubIds = new Set(remote.submissionIds);
-  const remoteVoteIds = new Set(remote.voteIds || []);
+async function connectRelays() {
+  if (!nostrReady()) {
+    netLog("nostr-tools failed to load — running offline with local state", "warn");
+    for (const url of relays) setRelayStatus(url, "off");
+    return;
+  }
+  if (liveSub) { try { liveSub.close(); } catch (e) {} liveSub = null; }
+  if (pool) { try { pool.close(relays); } catch (e) {} }
+  pool = new NostrTools.SimplePool();
 
-  // What we have that they don't
-  const missingEnrollments = [];
-  for (const [id, data] of state.enrollments) {
-    if (!remoteEnrollIds.has(id)) missingEnrollments.push([id, data]);
-  }
-  const missingTopics = [];
-  for (const [id, data] of state.topics) {
-    if (!remoteTopicIds.has(id)) missingTopics.push([id, data]);
-  }
-  const missingSubmissions = [];
-  for (const [id, data] of state.submissions) {
-    if (!remoteSubIds.has(id)) missingSubmissions.push([id, data]);
-  }
-  const missingVotes = [];
-  for (const [id, data] of state.votes) {
-    if (!remoteVoteIds.has(id)) missingVotes.push([id, data]);
+  for (const url of relays) {
+    setRelayStatus(url, "connecting");
+    pool.ensureRelay(url, { connectionTimeout: 8000 })
+      .then(() => { setRelayStatus(url, "ok"); netLog("Connected " + url, "ok"); })
+      .catch(err => { setRelayStatus(url, "off"); netLog("Relay unreachable " + url, "warn"); });
   }
 
-  const conn = state.connections.get(fromPeer);
-  if (!conn) return;
-
-  // Send them what they're missing
-  const missingN = missingEnrollments.length + missingTopics.length + missingSubmissions.length + missingVotes.length;
-  if (missingN) {
-    netLog("Sending " + missingN + " missing entries to " + fromPeer, "ok");
-    conn.send({
-      type: "sync",
-      msgId: generateId(),
-      enrollments: missingEnrollments,
-      topics: missingTopics,
-      submissions: missingSubmissions,
-      votes: missingVotes,
-      peerList: [...state.connections.keys(), state.myPeerId],
-    });
-  }
-
-  // What they have that we don't — request it
-  const weNeedEnrollIds = remote.enrollmentIds.filter(id => !state.enrollments.has(id));
-  const weNeedTopicIds = remote.topicIds.filter(id => !state.topics.has(id));
-  const weNeedSubIds = remote.submissionIds.filter(id => !state.submissions.has(id));
-  const weNeedVoteIds = (remote.voteIds || []).filter(id => !state.votes.has(id));
-
-  const needN = weNeedEnrollIds.length + weNeedTopicIds.length + weNeedSubIds.length + weNeedVoteIds.length;
-  if (needN) {
-    netLog("Requesting " + needN + " missing entries from " + fromPeer, "ok");
-    conn.send({
-      type: "digest-request",
-      msgId: generateId(),
-      enrollmentIds: weNeedEnrollIds,
-      topicIds: weNeedTopicIds,
-      submissionIds: weNeedSubIds,
-      voteIds: weNeedVoteIds,
-    });
-  }
-
-  // Connect to peers we don't know yet
-  for (const peerId of (msg.peerList || [])) {
-    if (peerId !== state.myPeerId && !state.connections.has(peerId)) {
-      connectToPeer(peerId);
-    }
-  }
-}
-
-// Handle a request for specific entries by ID
-async function handleDigestRequest(msg, fromPeer) {
-  const conn = state.connections.get(fromPeer);
-  if (!conn) return;
-
-  const enrollments = (msg.enrollmentIds || [])
-    .filter(id => state.enrollments.has(id))
-    .map(id => [id, state.enrollments.get(id)]);
-  const topics = (msg.topicIds || [])
-    .filter(id => state.topics.has(id))
-    .map(id => [id, state.topics.get(id)]);
-  const submissions = (msg.submissionIds || [])
-    .filter(id => state.submissions.has(id))
-    .map(id => [id, state.submissions.get(id)]);
-  const votes = (msg.voteIds || [])
-    .filter(id => state.votes.has(id))
-    .map(id => [id, state.votes.get(id)]);
-
-  if (enrollments.length || topics.length || submissions.length || votes.length) {
-    conn.send({
-      type: "sync",
-      msgId: generateId(),
-      enrollments,
-      topics,
-      submissions,
-      votes,
-      peerList: [...state.connections.keys(), state.myPeerId],
-    });
-  }
-}
-
-async function handleSync(msg, fromPeer) {
-  netLog("State sync from " + fromPeer, "ok");
-  let added = 0;
-
-  // Merge enrollments (write-through to IndexedDB)
-  const newEnrollments = [];
-  for (const [id, data] of msg.enrollments) {
-    if (!state.enrollments.has(id)) {
-      state.enrollments.set(id, data);
-      newEnrollments.push([id, data]);
-      added++;
-    }
-  }
-  if (newEnrollments.length) await store.putBatch("enrollments", newEnrollments);
-
-  // Merge topics
-  const newTopics = [];
-  for (const [id, data] of msg.topics) {
-    if (!state.topics.has(id)) {
-      state.topics.set(id, data);
-      newTopics.push([id, data]);
-      added++;
-    }
-  }
-  if (newTopics.length) await store.putBatch("topics", newTopics);
-
-  // Merge submissions (verify each one)
-  const newSubmissions = [];
-  for (const [id, data] of msg.submissions) {
-    if (!state.submissions.has(id)) {
-      const enrollment = state.enrollments.get(data.anonymous_id);
-      if (enrollment) {
-        const valid = await verifySignature(
-          enrollment.public_key, data.nonce, data.signature
-        );
-        if (valid) {
-          state.submissions.set(id, data);
-          newSubmissions.push([id, data]);
-          added++;
-        } else {
-          netLog("Rejected invalid submission " + id, "warn");
-        }
-      }
-    }
-  }
-  if (newSubmissions.length) await store.putBatch("submissions", newSubmissions);
-
-  // Merge standing-vote events (verify each one). The ledger is a G-Set:
-  // order is derived from (at, id) at replay time, so arrival order is moot.
-  const newVotes = [];
-  for (const [id, data] of (msg.votes || [])) {
-    if (!state.votes.has(id) && await voteEventValid(data)) {
-      state.votes.set(id, data);
-      newVotes.push([id, data]);
-      added++;
-    }
-  }
-  if (newVotes.length) await store.putBatch("votes", newVotes);
-
-  if (added > 0) {
-    netLog("Merged " + added + " new entries from " + fromPeer, "ok");
-  }
-
-  // Connect to peers we don't know yet
-  for (const peerId of (msg.peerList || [])) {
-    if (peerId !== state.myPeerId && !state.connections.has(peerId)) {
-      connectToPeer(peerId);
-    }
-  }
-
-  refreshAll();
-  updateStorageStats();
-}
-
-async function handleEnrollMsg(msg) {
-  const added = await addEnrollment(msg.anonymous_id, {
-    public_key: msg.public_key,
-    factors: msg.factors,
-    enrolled_at: msg.enrolled_at,
+  // Backfill from a little before the newest event we hold, then stay live.
+  const since = Math.max(0, (state.sinceSec || 0) - 600);
+  liveSub = pool.subscribeMany(relays, [{ kinds: ALL_KINDS, "#t": [APP_TAG], since }], {
+    onevent: ev => { ingestEvent(ev, "relay"); },
+    oneose: () => { netLog("Relay backfill complete", "ok"); refreshAll(); },
   });
-  if (!added) return;
-  // Re-gossip to peers who may not have seen it
-  broadcast(msg);
-  refreshAll();
-  updateStorageStats();
+
+  republishOutbox();
 }
 
-async function handleTopicMsg(msg) {
-  const added = await addTopic(msg.topic.id, msg.topic);
-  if (!added) return;
-  // Alert the citizen if this fresh issue concerns them — checked before
-  // renderTopics() marks it "known". Backlog from anti-entropy sync arrives via
-  // handleSync instead, so opening the app never floods you with old alerts.
-  notifyIfRelevant(msg.topic);
-  broadcast(msg);
-  refreshAll();
-  updateStorageStats();
+// Verify, map, validate, store. Used for events from relays AND our own.
+async function ingestEvent(ev, source) {
+  if (!ev || state.events.has(ev.id)) return false;
+  if (!NostrTools.verifyEvent(ev)) { netLog("Rejected event with bad signature", "warn"); return false; }
+  const mapped = eventToRecord(ev);
+  if (!mapped) return false;
+  return admit(ev, mapped, source);
 }
 
-async function handleSubmitMsg(msg) {
-  if (state.submissions.has(msg.submission.id)) return;
-
-  // Verify the signature before accepting
-  const enrollment = state.enrollments.get(msg.submission.anonymous_id);
-  if (!enrollment) {
-    netLog("Rejected submission from unknown identity", "warn");
-    return;
-  }
-
-  const valid = await verifySignature(
-    enrollment.public_key,
-    msg.submission.nonce,
-    msg.submission.signature
-  );
-  if (!valid) {
-    netLog("Rejected submission with invalid signature", "warn");
-    return;
-  }
-
-  // Check one-person-one-vote per topic+type
-  for (const [, sub] of state.submissions) {
-    if (sub.topic_id === msg.submission.topic_id &&
-        sub.anonymous_id === msg.submission.anonymous_id &&
-        sub.submission_type === msg.submission.submission_type) {
-      netLog("Rejected duplicate submission", "warn");
-      return;
-    }
-  }
-
-  await addSubmission(msg.submission.id, msg.submission);
-  broadcast(msg);
-  refreshAll();
-  updateStorageStats();
+async function admit(ev, mapped, source) {
+  const verdict = recordValid(mapped, state);
+  if (verdict === "invalid") { netLog("Rejected invalid " + mapped.store.slice(0, -1), "warn"); return false; }
+  if (verdict !== "ok") { pending.push({ ev, mapped }); return false; } // wait for dependency
+  const target = state[mapped.store];
+  if (target.has(mapped.id)) return false;
+  target.set(mapped.id, mapped.record);
+  state.events.set(ev.id, ev);
+  state.sinceSec = Math.max(state.sinceSec || 0, ev.created_at || 0);
+  await store.put(mapped.store, mapped.id, mapped.record);
+  await store.put("events", ev.id, ev);
+  await store.put("meta", "since", state.sinceSec);
+  if (mapped.store === "topics" && source === "relay") notifyIfRelevant(mapped.record);
+  if (mapped.store === "enrollments" || mapped.store === "topics") await drainPending();
+  if (source === "relay") { refreshAll(); updateStorageStats(); }
+  return true;
 }
 
-// A vote event is accepted only if it is signed by an enrolled identity and
-// well-formed for its topic. Nothing else is trusted from the wire: `previous`
-// and `kind` are derived at replay, never read from the event.
-async function voteEventValid(ev) {
-  if (!ev || !ev.id || !ev.topic_id || !ev.anonymous_id || !ev.at || !ev.nonce || !ev.signature) return false;
-  const enrollment = state.enrollments.get(ev.anonymous_id);
-  if (!enrollment) return false;
-  const topic = state.topics.get(ev.topic_id);
-  if (!topic || topic.allow_votes === false) return false;
-  if (ev.choice !== null && topic.vote_options && topic.vote_options.length &&
-      !topic.vote_options.includes(ev.choice)) return false;
-  return verifySignature(enrollment.public_key, ev.nonce, ev.signature);
+async function drainPending() {
+  const queue = pending; pending = [];
+  for (const item of queue) await admit(item.ev, item.mapped, "relay");
 }
 
-async function handleVoteMsg(msg) {
-  const ev = msg.event;
-  if (!ev || state.votes.has(ev.id)) return;
-  if (!(await voteEventValid(ev))) {
-    netLog("Rejected invalid vote event", "warn");
-    return;
+// Sign with the local key, admit locally, then publish to every relay.
+async function publishEvent(template) {
+  if (!me) throw new Error("not enrolled");
+  if (!nostrReady()) throw new Error("nostr-tools unavailable");
+  const ev = NostrTools.finalizeEvent(template, hexToBytes(me.secret_key));
+  const mapped = eventToRecord(ev);
+  if (!mapped) throw new Error("event did not map to a record");
+  const ok = await admit(ev, mapped, "local");
+  if (!ok) throw new Error("event was not accepted locally");
+  await store.put("outbox", ev.id, ev);
+  sendToRelays(ev);
+  return { ev, mapped };
+}
+
+function sendToRelays(ev) {
+  if (!pool) return;
+  const live = relays.filter(u => relayStatus.get(u) === "ok");
+  if (!live.length) { netLog("No relay reachable — kept in outbox", "warn"); return; }
+  for (const p of pool.publish(live, ev)) {
+    p.then(() => {}).catch(err => netLog("Publish rejected: " + (err && err.message || err), "warn"));
   }
-  await addVote(ev.id, ev);
-  broadcast(msg);
-  refreshAll();
-  updateStorageStats();
+}
+
+async function republishOutbox() {
+  const mine = await store.getAll("outbox");
+  for (const [, ev] of mine) sendToRelays(ev);
+  if (mine.length) netLog("Re-published " + mine.length + " of your events", "ok");
+}
+
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+/* ---- Relay list UI ---- */
+function renderRelays() {
+  const el = document.getElementById("relay-list");
+  if (!el) return;
+  el.innerHTML = relays.map(url => {
+    const s = relayStatus.get(url) || "off";
+    return '<div class="relay"><span class="peer-dot ' + (s === "ok" ? "" : s === "connecting" ? "wait" : "off") +
+      '"></span><span class="relay-url">' + esc(url) + '</span>' +
+      '<button class="tiny secondary" onclick="removeRelay(\'' + esc(url) + '\')" aria-label="Remove relay">&times;</button></div>';
+  }).join("");
+  const ok = relays.filter(u => relayStatus.get(u) === "ok").length;
+  document.getElementById("room-meta").textContent =
+    ok ? ok + " of " + relays.length + " relays carrying the record" : "No relay reachable — working from local storage";
+}
+
+function addRelay() {
+  const input = document.getElementById("relay-input");
+  let url = input.value.trim();
+  if (!url) return;
+  if (!/^wss?:\/\//.test(url)) url = "wss://" + url;
+  if (relays.includes(url)) { flash("Already listed.", "err"); return; }
+  relays.push(url);
+  localStorage.setItem(RELAY_KEY, JSON.stringify(relays));
+  input.value = "";
+  connectRelays();
+}
+
+function removeRelay(url) {
+  relays = relays.filter(u => u !== url);
+  if (!relays.length) relays = DEFAULT_RELAYS.slice();
+  localStorage.setItem(RELAY_KEY, JSON.stringify(relays));
+  relayStatus.delete(url);
+  connectRelays();
 }
 
 /* ==================================================================
@@ -1994,6 +1763,7 @@ async function handleVoteMsg(msg) {
    ================================================================== */
 
 async function doEnroll() {
+  if (!nostrReady()) { flash("The signing library did not load. Check your connection and reload.", "err"); return; }
   const btn = document.getElementById("enroll-btn");
   btn.disabled = true;
   btn.textContent = "Scanning biometrics...";
@@ -2001,42 +1771,30 @@ async function doEnroll() {
   btn.textContent = "Generating cryptographic key...";
   await pause(600);
 
-  const { privateKey, publicKey } = await generateKeypair();
-  const anonymousId = generateId(16);
+  const sk = NostrTools.generateSecretKey();
+  const pk = NostrTools.getPublicKey(sk);
   const factorNames = [...selectedFactors];
 
-  const enrollment = {
-    public_key: publicKey,
-    factors: factorNames,
-    enrolled_at: new Date().toISOString(),
-  };
-  await addEnrollment(anonymousId, enrollment);
-
-  // Save locally (private key NEVER leaves this browser)
-  me = {
-    anonymous_id: anonymousId,
-    public_key: publicKey,
-    private_key: privateKey,
-    factors_enrolled: factorNames,
-  };
-  localStorage.setItem("od_p2p_me", JSON.stringify(me));
-
-  // Broadcast enrollment to all peers
-  broadcast({
-    type: "enroll",
-    anonymous_id: anonymousId,
-    public_key: publicKey,
-    factors: factorNames,
-    enrolled_at: enrollment.enrolled_at,
-  });
+  // Save locally first (secret key NEVER leaves this browser), then publish
+  // the enrollment as a self-signed event: proof of key control, no identity.
+  me = { anonymous_id: pk, secret_key: bytesToHex(sk), factors_enrolled: factorNames };
+  localStorage.setItem("od_nostr_me", JSON.stringify(me));
+  try {
+    await publishEvent(buildEnrollEvent(factorNames));
+  } catch (e) {
+    flash("Enrollment could not be recorded: " + e.message, "err");
+    btn.disabled = false; btn.textContent = "Retry";
+    return;
+  }
 
   refreshIdentity();
-  updateStats();
+  refreshAll();
   updateStorageStats();
-  flash("Identity verified. Your private key is stored only in this browser.", "ok");
+  flash("Identity verified. Your secret key is stored only in this browser.", "ok");
 }
 
 async function createTopic() {
+  if (!me) { flash("Verify your identity first — a question is a signed record too.", "err"); return; }
   const title = document.getElementById("new-topic-title").value.trim();
   const desc = document.getElementById("new-topic-desc").value.trim();
   const optStr = document.getElementById("new-topic-options").value.trim();
@@ -2051,38 +1809,26 @@ async function createTopic() {
   const quorumRaw = parseInt(document.getElementById("new-topic-quorum").value, 10);
   const quorum = Number.isFinite(quorumRaw) && quorumRaw > 0 ? quorumRaw : null;
 
-  const topic = {
-    id: generateId(12),
-    title,
-    description: desc,
-    allow_opinions: true,
-    allow_ideas: true,
-    allow_votes: voteOptions.length > 0,
-    vote_options: voteOptions,
-    tags,
-    region,
-    closes_at: closesAt,
-    quorum,
-    created_at: new Date().toISOString(),
-  };
+  let result;
+  try {
+    result = await publishEvent(buildTopicEvent({
+      title, description: desc,
+      allow_opinions: true, allow_ideas: true,
+      allow_votes: voteOptions.length > 0, vote_options: voteOptions,
+      tags, region, closes_at: closesAt, quorum,
+    }));
+  } catch (e) { flash("Could not create topic: " + e.message, "err"); return; }
+  knownTopicIds.add(result.mapped.id); // it's mine — don't alert myself about it
 
-  await addTopic(topic.id, topic);
-  knownTopicIds.add(topic.id); // it's mine — don't alert myself about it
-  broadcast({ type: "topic", topic });
-
-  // Clear form
-  document.getElementById("new-topic-title").value = "";
-  document.getElementById("new-topic-desc").value = "";
-  document.getElementById("new-topic-options").value = "";
-  document.getElementById("new-topic-tags").value = "";
-  document.getElementById("new-topic-region").value = "";
-  document.getElementById("new-topic-deadline").value = "";
-  document.getElementById("new-topic-quorum").value = "";
+  for (const id of ["new-topic-title", "new-topic-desc", "new-topic-options", "new-topic-tags",
+                    "new-topic-region", "new-topic-deadline", "new-topic-quorum"]) {
+    document.getElementById(id).value = "";
+  }
   document.getElementById("create-topic-form").classList.add("hidden");
 
   refreshAll();
   updateStorageStats();
-  flash("Topic created and shared with all peers.", "ok");
+  flash("Topic created and published to the relays.", "ok");
 }
 
 // Cast a standing vote, change it, or withdraw it (choice === null).
@@ -2094,26 +1840,14 @@ async function castVote(choice) {
   if (!currentTopic) return;
   const t = currentTopic;
   if (isClosed(t)) { flash("This issue is closed.", "err"); return; }
-  const events = [...state.votes.values()];
-  const previous = standingChoice(events, t.id, me.anonymous_id);
+  const previous = standingChoice([...state.votes.values()], t.id, me.anonymous_id);
   if (choice === null && previous === null) { flash("You have no standing vote to withdraw.", "err"); return; }
   if (choice !== null && previous === choice) { flash("Your vote already stands at " + choice + ".", "err"); return; }
   const reason = document.getElementById("txt-reason").value.trim() || null;
 
-  const nonce = generateId(32);
-  const signature = await signMessage(me.public_key, nonce);
-  const ev = {
-    id: generateId(12),
-    topic_id: t.id,
-    anonymous_id: me.anonymous_id,
-    choice,
-    reason,
-    at: new Date().toISOString(),
-    nonce,
-    signature,
-  };
-  await addVote(ev.id, ev);
-  broadcast({ type: "vote", event: ev });
+  try {
+    await publishEvent(buildVoteEvent(t.id, choice, reason));
+  } catch (e) { flash("Vote not recorded: " + e.message, "err"); return; }
   document.getElementById("txt-reason").value = "";
   refreshAll();
   updateStorageStats();
@@ -2133,65 +1867,35 @@ async function send(type) {
   else if (type === "idea") content = document.getElementById("txt-idea").value.trim();
   if (!content) { flash("Please enter your " + type + " first.", "err"); return; }
 
-  // Check if already submitted this type for this topic
+  // One opinion and one idea per person per topic.
   for (const [, sub] of state.submissions) {
-    if (sub.topic_id === currentTopic.id &&
-        sub.anonymous_id === me.anonymous_id &&
-        sub.submission_type === type) {
+    if (sub.topic_id === currentTopic.id && sub.anonymous_id === me.anonymous_id && sub.submission_type === type) {
       flash("You already submitted a " + type + " for this topic.", "err");
       return;
     }
   }
-
-  // Generate a nonce and sign it
-  const nonce = generateId(32);
-  const signature = await signMessage(me.public_key, nonce);
-
-  const submission = {
-    id: generateId(12),
-    topic_id: currentTopic.id,
-    anonymous_id: me.anonymous_id,
-    submission_type: type,
-    content,
-    nonce,
-    signature,
-    submitted_at: new Date().toISOString(),
-  };
-
-  await addSubmission(submission.id, submission);
-  broadcast({ type: "submit", submission });
+  try {
+    await publishEvent(buildSubmissionEvent(currentTopic.id, type, content));
+  } catch (e) { flash("Not recorded: " + e.message, "err"); return; }
 
   if (type === "opinion") document.getElementById("txt-opinion").value = "";
   if (type === "idea") document.getElementById("txt-idea").value = "";
   refreshAll();
   updateStorageStats();
-  flash(type.charAt(0).toUpperCase() + type.slice(1) + " submitted and broadcast to all peers.", "ok");
+  flash(type.charAt(0).toUpperCase() + type.slice(1) + " submitted and published to the relays.", "ok");
 }
 
 /* ==================================================================
    UI
    ================================================================== */
 
-async function showRoomUI() {
-  // If already enrolled from a previous session, restore and broadcast identity
-  if (me) {
-    if (!state.enrollments.has(me.anonymous_id)) {
-      const enrollment = {
-        public_key: me.public_key,
-        factors: me.factors_enrolled,
-        enrolled_at: new Date().toISOString(),
-      };
-      await addEnrollment(me.anonymous_id, enrollment);
-      broadcast({
-        type: "enroll",
-        anonymous_id: me.anonymous_id,
-        public_key: me.public_key,
-        factors: me.factors_enrolled,
-        enrolled_at: enrollment.enrolled_at,
-      });
-    }
+async function restoreIdentity() {
+  // Enrolled in a previous session but the record isn't held locally
+  // (e.g. cleared storage): re-publish the enrollment from the key we have.
+  if (me && !state.enrollments.has(me.anonymous_id) && nostrReady()) {
+    try { await publishEvent(buildEnrollEvent(me.factors_enrolled)); }
+    catch (e) { netLog("Could not re-publish enrollment: " + e.message, "warn"); }
   }
-
   refreshIdentity();
   refreshAll();
   updateStorageStats();
@@ -2564,12 +2268,13 @@ function renderSubmissions(topicId) {
 }
 
 function updateStats() {
-  document.getElementById("st-peers").textContent = state.connections.size;
+  const ok = relays.filter(u => relayStatus.get(u) === "ok").length;
+  document.getElementById("st-peers").textContent = ok + "/" + relays.length;
   document.getElementById("st-enrolled").textContent = state.enrollments.size;
-  document.getElementById("st-subs").textContent = state.submissions.size;
+  document.getElementById("st-subs").textContent = state.submissions.size + state.votes.size;
 
   const dot = document.getElementById("net-dot");
-  dot.className = state.connections.size > 0 ? "peer-dot" : "peer-dot off";
+  dot.className = ok > 0 ? "peer-dot" : "peer-dot off";
 }
 
 async function updateStorageStats() {
@@ -2589,7 +2294,7 @@ async function updateStorageStats() {
 function copyLink() {
   const url = window.location.origin + window.location.pathname;
   navigator.clipboard.writeText(url).then(() => {
-    flash("Link copied. Anyone who opens it joins the same global mesh.", "ok");
+    flash("Link copied. Anyone who opens it reads the same record from the same relays.", "ok");
   }).catch(() => {
     flash("Link: " + url, "ok");
   });
@@ -2924,8 +2629,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 3. Update storage display
   await updateStorageStats();
 
-  // 4. Auto-join the global mesh — no room codes, one network for all
-  joinGlobalMesh();
+  // 4. Restore identity (re-publishes enrollment if needed), then connect to relays.
+  renderRelays();
+  await restoreIdentity();
+  connectRelays();
 });
 </script>
 </body>
