@@ -12,8 +12,18 @@ are for a given citizen, so voices are invited in when an issue concerns them.
 The :mod:`~opendemocracy.participation.votes` module holds *standing* votes: one
 revocable, changeable vote per person per topic, kept as an append-only ledger
 so tallies are replayable at any moment and changed minds are visible data.
+
+The :mod:`~opendemocracy.participation.attention` module answers *what needs
+attention?* — the point where automatic flow (projected preferences, standing
+votes) hands over to choice, with every claim on attention naming its reason.
 """
 
+from opendemocracy.participation.attention import (
+    AGENDA_PROMPT,
+    AttentionItem,
+    AttentionReason,
+    what_needs_attention,
+)
 from opendemocracy.participation.relevance import (
     Interests,
     activity_score,
@@ -41,6 +51,9 @@ from opendemocracy.participation.votes import (
 )
 
 __all__ = [
+    "AGENDA_PROMPT",
+    "AttentionItem",
+    "AttentionReason",
     "Interests",
     "Migration",
     "StandingVoteLedger",
@@ -60,4 +73,5 @@ __all__ = [
     "relevance_score",
     "urgency_score",
     "VoteEvent",
+    "what_needs_attention",
 ]

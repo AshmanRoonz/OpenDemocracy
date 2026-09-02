@@ -22,6 +22,8 @@ from opendemocracy.models import (
     SubmissionType,
     Topic,
 )
+from opendemocracy.participation.attention import AGENDA_PROMPT, what_needs_attention
+from opendemocracy.participation.relevance import Interests
 from opendemocracy.participation.submissions import SubmissionStore
 from opendemocracy.participation.topics import TopicStore
 from opendemocracy.participation.votes import StandingVoteLedger
@@ -162,6 +164,27 @@ class MigrationOut(BaseModel):
     to_choice: str | None
     count: int
     reasons: list[str]
+
+
+class AttentionRequest(BaseModel):
+    """Interests stay on the citizen's device; they are sent only for this answer."""
+
+    tags: list[str] = []
+    region: str | None = None
+    anonymous_id: str | None = None  # to account for your own standing votes
+
+
+class AttentionItemOut(BaseModel):
+    topic_id: str
+    title: str
+    reasons: list[str]
+    explanations: list[str]
+    score: float
+
+
+class AttentionOut(BaseModel):
+    items: list[AttentionItemOut]
+    agenda_prompt: str  # the question asked back of the citizen
 
 
 class TopicCreateRequest(BaseModel):
@@ -449,6 +472,30 @@ def api_topic_migrations(topic_id: str) -> list[MigrationOut]:
         )
         for m in vote_ledger.migrations(topic_id)
     ]
+
+
+@app.post("/api/attention", response_model=AttentionOut)
+def api_attention(req: AttentionRequest) -> AttentionOut:
+    """*What needs attention?* — issues where flow should hand over to choice."""
+    items = what_needs_attention(
+        topic_store.list_open(),
+        Interests(tags=req.tags, region=req.region),
+        ledger=vote_ledger,
+        voter_id=req.anonymous_id,
+    )
+    return AttentionOut(
+        items=[
+            AttentionItemOut(
+                topic_id=i.topic.id,
+                title=i.topic.title,
+                reasons=[r.value for r in i.reasons],
+                explanations=i.explanations,
+                score=i.score,
+            )
+            for i in items
+        ],
+        agenda_prompt=AGENDA_PROMPT,
+    )
 
 
 @app.get("/api/stats")

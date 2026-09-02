@@ -47,6 +47,7 @@ No top-down imposition. Just honest revelation of our shared reality.
 - **Every voice is credible signal.** Verified humans, anonymous identity, deterministic tallies, and the denominator always shown.
 - **Every voice matters — including the ones that lost.** Full distributions, intensity beside headcount, dissent as a first-class output.
 - **AI connects and organizes; humans decide.** The AI never produces a number and never casts a vote.
+- **Flow until attention.** Preferences project and votes stand automatically; Vote interrupts only for a named reason — *what needs attention?* — and asks the same question back: *what needs attention that nobody has asked about yet?*
 
 Read the founding document: **[VOTE.md](VOTE.md)**. The first release is one community, one real decision.
 
@@ -122,6 +123,9 @@ Prioritizes raw signal over curated narratives. Designed to resist capture by an
 - [x] **Standing votes:** one revocable, changeable vote per person; an
   append-only ledger with replayable tallies, a living timeline, and
   "what changed your mind?" migrations. See [VOTE.md](VOTE.md).
+- [x] **What needs attention?** — the point where automatic flow hands over
+  to choice, every claim on attention naming its reason; plus the agenda
+  prompt asked back of the citizen. See [VOTE.md](VOTE.md).
 - [ ] **Vote MVP:** one community, one real decision — proposition merging
   and exportable findings on top of standing votes. See [VOTE.md](VOTE.md).
 

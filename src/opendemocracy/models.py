@@ -220,6 +220,11 @@ class Topic:
     # quorum and flags the issue once enough voices have weighed in — so people
     # can see, and reach, the threshold where a decision becomes legitimate.
     quorum: int | None = None
+    # Open declaration of how *supporting* this issue aligns with named value
+    # axes, in [-1, 1] — e.g. ``{"public-services": 1.0, "taxes-low": -0.6}``.
+    # Declared like tags, visible to everyone, and the only thing the
+    # preference layer projects on. Empty means no projection is possible.
+    value_alignments: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass

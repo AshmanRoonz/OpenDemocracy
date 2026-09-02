@@ -336,3 +336,26 @@ async def test_standing_vote_rejects_invalid_and_unverified(
 
     res = await client.get("/api/topics/nope/tally")
     assert res.status_code == 404
+
+
+@pytest.mark.anyio()
+async def test_attention_names_its_reasons(client: AsyncClient) -> None:
+    from opendemocracy.models import Topic
+
+    topic_store.create(Topic(id="housing-1", title="Rent cap", tags=["housing"]))
+    res = await client.post("/api/attention", json={"tags": ["housing"]})
+    assert res.status_code == 200
+    body = res.json()
+    assert "nobody has asked" in body["agenda_prompt"]
+    ids = {i["topic_id"]: i for i in body["items"]}
+    assert ids["housing-1"]["reasons"] == ["not_yet_heard"]
+    assert "demo-ubi" not in ids  # not relevant, no vote of mine: silence
+
+    # Once I've voted, that reason is gone.
+    alice = await _enrolled(client)
+    await _vote(client, alice, "Yes", topic_id="housing-1")
+    res = await client.post(
+        "/api/attention",
+        json={"tags": ["housing"], "anonymous_id": alice["anonymous_id"]},
+    )
+    assert res.json()["items"] == []
