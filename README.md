@@ -126,8 +126,12 @@ Prioritizes raw signal over curated narratives. Designed to resist capture by an
 - [x] **What needs attention?** — the point where automatic flow hands over
   to choice, every claim on attention naming its reason; plus the agenda
   prompt asked back of the citizen. See [VOTE.md](VOTE.md).
-- [ ] **Vote MVP:** one community, one real decision — proposition merging
-  and exportable findings on top of standing votes. See [VOTE.md](VOTE.md).
+- [x] **Propositions with visible framing variants:** duplicate wordings are
+  suggested transparently and merged by a human; every wording keeps its own
+  tally, the combined tally counts people once, and how far the wordings
+  disagree is a first-class number. See [VOTE.md](VOTE.md).
+- [ ] **Vote MVP:** one community, one real decision — exportable findings
+  on top of standing votes and propositions. See [VOTE.md](VOTE.md).
 
 ### Phase 3: Deliberative Integration
 - [ ] Partner with [Polis](https://pol.is/)-style deliberative tools

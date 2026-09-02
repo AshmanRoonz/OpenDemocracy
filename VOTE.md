@@ -92,7 +92,7 @@ Vote asks two **standard questions**:
 
 | Question | Direction | What it does |
 |---|---|---|
-| **What needs attention?** | System → citizen | Surfaces the issues where flow has stopped being trustworthy *for you*: your own values conflict, your profile can't project, people who stood where you stand are moving, the picture shifted since you chose, the window is closing, quorum is near, or it concerns you and you haven't spoken. Each is a named reason with a fixed, readable weight. Silence is a valid answer. |
+| **What needs attention?** | System → citizen | Surfaces the issues where flow has stopped being trustworthy *for you*: your own values conflict, your profile can't project, people who stood where you stand are moving, the picture shifted since you chose, the wordings of the question disagree, the window is closing, quorum is near, or it concerns you and you haven't spoken. Each is a named reason with a fixed, readable weight. Silence is a valid answer. |
 | **What needs attention that nobody has asked about yet?** | Citizen → system | The same question turned around is the agenda. Answering it in one line creates a proposition. |
 | **What changed your mind?** | Citizen → everyone | Asked the moment a standing vote changes. Turns changed minds into the most honest measure of an argument. |
 
@@ -123,7 +123,7 @@ that the people, not the machine, can show they made?**
 Scope of the first release:
 
 - Open proposition creation with AI duplicate-merging and visible framing
-  variants.
+  variants — built (suggestions are transparent and lexical; a human merges).
 - Verified-human, anonymous voting; standing votes with change history and
   "what changed your mind?" — built.
 - The live issues feed (relevance · urgency · activity) — built.
@@ -145,7 +145,7 @@ waits until one community has been heard and answered.
 | What needs attention? / agenda prompt | `participation/attention.py` · `/api/attention` |
 | Full-distribution output | `output/reports.py` |
 | Standing, revocable votes with change history | `participation/votes.py` · `/api/vote`, `/tally`, `/timeline`, `/migrations` |
-| Proposition merging and framing variants | *next* |
+| Proposition merging and framing variants | `participation/propositions.py` · `/api/propositions/*`, `/api/topics/{id}/proposition` |
 | Finding snapshots | *next* |
 
 ---

@@ -225,6 +225,10 @@ class Topic:
     # Declared like tags, visible to everyone, and the only thing the
     # preference layer projects on. Empty means no projection is possible.
     value_alignments: dict[str, float] = field(default_factory=dict)
+    # Topics that ask the same question in different words share a
+    # proposition. Each topic stays a visible *framing variant*; the
+    # proposition is what they have in common. ``None`` = not merged.
+    proposition_id: str | None = None
 
 
 @dataclass

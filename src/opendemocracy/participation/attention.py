@@ -25,6 +25,7 @@ from enum import StrEnum
 
 from opendemocracy.models import Topic
 from opendemocracy.participation.preferences import PreferenceProfile
+from opendemocracy.participation.propositions import PropositionRegistry
 from opendemocracy.participation.relevance import (
     Interests,
     _aware,
@@ -46,6 +47,7 @@ class AttentionReason(StrEnum):
     UNKNOWN_VALUES = "unknown_values"  # the profile can't project here
     PEERS_MOVING = "peers_moving"  # people who stood where you stand are moving
     STALE_VOTE = "stale_vote"  # the picture shifted since you last chose
+    FRAMING_MATTERS = "framing_matters"  # wordings of this question disagree
     CLOSING_SOON = "closing_soon"  # the decision window is ending
     QUORUM_NEAR = "quorum_near"  # a few more voices make it legitimate
     NOT_YET_HEARD = "not_yet_heard"  # it concerns you and you haven't spoken
@@ -59,6 +61,7 @@ WEIGHTS: dict[AttentionReason, float] = {
     AttentionReason.PEERS_MOVING: 2.0,
     AttentionReason.CLOSING_SOON: 2.0,
     AttentionReason.STALE_VOTE: 1.5,
+    AttentionReason.FRAMING_MATTERS: 1.5,
     AttentionReason.QUORUM_NEAR: 1.0,
     AttentionReason.NOT_YET_HEARD: 1.0,
 }
@@ -171,6 +174,38 @@ def _vote_reasons(
     return out
 
 
+def _framing_reasons(
+    topic: Topic,
+    interests: Interests,
+    registry: PropositionRegistry | None,
+    ledger: StandingVoteLedger | None,
+    voter_id: str | None,
+) -> list[tuple[AttentionReason, str]]:
+    """The wording is doing work — worth a look if this question is yours."""
+    if registry is None or topic.proposition_id is None:
+        return []
+    mine = (
+        ledger is not None
+        and voter_id is not None
+        and any(
+            ledger.current(v.id, voter_id) is not None
+            for v in registry.variants(topic.id)
+        )
+    )
+    if not mine and not matches_interests(topic, interests):
+        return []
+    view = registry.view(topic.id)
+    if view is None or not view.framing_matters:
+        return []
+    return [
+        (
+            AttentionReason.FRAMING_MATTERS,
+            f"Wordings of this question disagree by {view.divergence:.0%} on "
+            f"{view.divergence_option!r} — how it's asked is doing work.",
+        )
+    ]
+
+
 def _milestone_reasons(
     topic: Topic, ledger: StandingVoteLedger | None, now: datetime
 ) -> list[tuple[AttentionReason, str]]:
@@ -201,6 +236,7 @@ def what_needs_attention(
     ledger: StandingVoteLedger | None = None,
     voter_id: str | None = None,
     now: datetime | None = None,
+    registry: PropositionRegistry | None = None,
 ) -> list[AttentionItem]:
     """Answer *what needs attention?* for one citizen over the open issues.
 
@@ -216,6 +252,7 @@ def what_needs_attention(
         found = (
             _value_reasons(topic, profile)
             + _vote_reasons(topic, interests, ledger, voter_id)
+            + _framing_reasons(topic, interests, registry, ledger, voter_id)
             + _milestone_reasons(topic, ledger, now)
         )
         if not found:

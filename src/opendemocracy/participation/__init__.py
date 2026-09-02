@@ -16,6 +16,10 @@ so tallies are replayable at any moment and changed minds are visible data.
 The :mod:`~opendemocracy.participation.attention` module answers *what needs
 attention?* — the point where automatic flow (projected preferences, standing
 votes) hands over to choice, with every claim on attention naming its reason.
+
+The :mod:`~opendemocracy.participation.propositions` module merges duplicate
+questions into one proposition while keeping every wording visible, so the
+signal doesn't fragment and framing effects are shown rather than hidden.
 """
 
 from opendemocracy.participation.attention import (
@@ -23,6 +27,13 @@ from opendemocracy.participation.attention import (
     AttentionItem,
     AttentionReason,
     what_needs_attention,
+)
+from opendemocracy.participation.propositions import (
+    MergeSuggestion,
+    PropositionRegistry,
+    PropositionView,
+    similarity,
+    suggest_merges,
 )
 from opendemocracy.participation.relevance import (
     Interests,
@@ -55,7 +66,10 @@ __all__ = [
     "AttentionItem",
     "AttentionReason",
     "Interests",
+    "MergeSuggestion",
     "Migration",
+    "PropositionRegistry",
+    "PropositionView",
     "StandingVoteLedger",
     "SubmissionStore",
     "Tally",
@@ -71,6 +85,8 @@ __all__ = [
     "rank_topics",
     "region_matches",
     "relevance_score",
+    "similarity",
+    "suggest_merges",
     "urgency_score",
     "VoteEvent",
     "what_needs_attention",

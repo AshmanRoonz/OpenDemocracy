@@ -15,6 +15,7 @@ from opendemocracy.web.app import (
     topic_store,
     vote_ledger,
 )
+from opendemocracy.web.app import propositions as proposition_registry
 
 
 @pytest.fixture(autouse=True)
@@ -26,6 +27,12 @@ def _reset_state() -> None:  # type: ignore[misc]
     submission_store._submitted.clear()
     vote_ledger._events.clear()
     vote_ledger._current.clear()
+    proposition_registry.history.clear()
+    for t in list(topic_store._topics.values()):
+        if t.id != "demo-ubi":
+            del topic_store._topics[t.id]
+        else:
+            t.proposition_id = None
     # Re-seed the demo topic if it got cleared.
     from opendemocracy.models import Topic
 
@@ -359,3 +366,53 @@ async def test_attention_names_its_reasons(client: AsyncClient) -> None:
         json={"tags": ["housing"], "anonymous_id": alice["anonymous_id"]},
     )
     assert res.json()["items"] == []
+
+
+@pytest.mark.anyio()
+async def test_propositions_suggest_merge_and_view(client: AsyncClient) -> None:
+    from opendemocracy.models import Topic
+
+    topic_store.create(
+        Topic(
+            id="ban",
+            title="Ban cars from the city centre",
+            tags=["transport"],
+            vote_options=["Yes", "No"],
+        )
+    )
+    topic_store.create(
+        Topic(
+            id="free",
+            title="Make the city centre car-free",
+            tags=["transport"],
+            vote_options=["Yes", "No"],
+        )
+    )
+    sug = (await client.get("/api/propositions/suggestions")).json()
+    assert [(s["topic_a"], s["topic_b"]) for s in sug] == [("ban", "free")]
+    assert "centre" in sug[0]["shared_terms"]
+
+    res = await client.get("/api/topics/ban/proposition")
+    assert res.status_code == 404  # not merged yet
+
+    res = await client.post(
+        "/api/propositions/merge",
+        json={"topic_ids": ["ban", "free"], "reason": "same question"},
+    )
+    assert res.status_code == 200
+    pid = res.json()["proposition_id"]
+
+    alice = await _enrolled(client)
+    await _vote(client, alice, "Yes", topic_id="ban")
+    await _vote(client, alice, "No", topic_id="free")  # latest stance wins in combined
+    view = (await client.get("/api/topics/free/proposition")).json()
+    assert view["proposition_id"] == pid
+    assert [v["topic_id"] for v in view["variants"]] == ["ban", "free"]
+    assert view["combined"]["counts"] == {"Yes": 0, "No": 1}
+    assert view["combined"]["standing"] == 1
+    assert view["framing_matters"] is False
+
+    res = await client.post(
+        "/api/propositions/merge", json={"topic_ids": ["ban", "demo-ubi"]}
+    )
+    assert res.status_code == 400

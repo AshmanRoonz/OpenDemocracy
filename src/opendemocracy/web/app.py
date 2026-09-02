@@ -23,6 +23,7 @@ from opendemocracy.models import (
     Topic,
 )
 from opendemocracy.participation.attention import AGENDA_PROMPT, what_needs_attention
+from opendemocracy.participation.propositions import PropositionRegistry, suggest_merges
 from opendemocracy.participation.relevance import Interests
 from opendemocracy.participation.submissions import SubmissionStore
 from opendemocracy.participation.topics import TopicStore
@@ -42,6 +43,7 @@ registry = IdentityRegistry()
 topic_store = TopicStore()
 submission_store = SubmissionStore(topic_store, registry)
 vote_ledger = StandingVoteLedger(topic_store, registry)
+propositions = PropositionRegistry(topic_store, vote_ledger)
 
 # Challenge cache: challenge_id → AuthChallenge
 _challenges: dict[str, object] = {}
@@ -185,6 +187,37 @@ class AttentionItemOut(BaseModel):
 class AttentionOut(BaseModel):
     items: list[AttentionItemOut]
     agenda_prompt: str  # the question asked back of the citizen
+
+
+class MergeRequest(BaseModel):
+    """Declare topics to be wordings of one proposition. A human act, with a reason."""
+
+    topic_ids: list[str]
+    reason: str | None = None
+    anonymous_id: str | None = None
+
+
+class MergeSuggestionOut(BaseModel):
+    topic_a: str
+    topic_b: str
+    score: float
+    shared_terms: list[str]
+    shared_tags: list[str]
+
+
+class FramingVariantOut(BaseModel):
+    topic_id: str
+    title: str
+    tally: TallyOut
+
+
+class PropositionOut(BaseModel):
+    proposition_id: str
+    variants: list[FramingVariantOut]
+    combined: TallyOut
+    divergence: float
+    divergence_option: str | None
+    framing_matters: bool
 
 
 class TopicCreateRequest(BaseModel):
@@ -474,6 +507,61 @@ def api_topic_migrations(topic_id: str) -> list[MigrationOut]:
     ]
 
 
+# ---------------------------------------------------------------------------
+# Propositions (framing variants)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/propositions/suggestions", response_model=list[MergeSuggestionOut])
+def api_merge_suggestions() -> list[MergeSuggestionOut]:
+    """Pairs of open topics that look like the same question. Suggests only."""
+    return [
+        MergeSuggestionOut(
+            topic_a=s.topic_a,
+            topic_b=s.topic_b,
+            score=s.score,
+            shared_terms=s.shared_terms,
+            shared_tags=s.shared_tags,
+        )
+        for s in suggest_merges(topic_store.list_open())
+    ]
+
+
+@app.post("/api/propositions/merge")
+def api_merge(req: MergeRequest) -> dict[str, str]:
+    """Merge wordings into one proposition. Every wording keeps its own tally."""
+    try:
+        pid = propositions.merge(req.topic_ids, req.reason, req.anonymous_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"proposition_id": pid}
+
+
+@app.get("/api/topics/{topic_id}/proposition", response_model=PropositionOut)
+def api_topic_proposition(topic_id: str) -> PropositionOut:
+    """The proposition this topic belongs to: wordings, tallies, divergence."""
+    if topic_store.get(topic_id) is None:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    view = propositions.view(topic_id)
+    if view is None:
+        raise HTTPException(
+            status_code=404, detail="Topic is not part of a proposition"
+        )
+    return PropositionOut(
+        proposition_id=view.proposition_id,
+        variants=[
+            FramingVariantOut(
+                topic_id=v.topic_id, title=v.title, tally=_tally_out(v.tally)
+            )
+            for v in view.variants
+        ],
+        combined=_tally_out(view.combined),
+        divergence=view.divergence,
+        divergence_option=view.divergence_option,
+        framing_matters=view.framing_matters,
+    )
+
+
 @app.post("/api/attention", response_model=AttentionOut)
 def api_attention(req: AttentionRequest) -> AttentionOut:
     """*What needs attention?* — issues where flow should hand over to choice."""
@@ -482,6 +570,7 @@ def api_attention(req: AttentionRequest) -> AttentionOut:
         Interests(tags=req.tags, region=req.region),
         ledger=vote_ledger,
         voter_id=req.anonymous_id,
+        registry=propositions,
     )
     return AttentionOut(
         items=[
