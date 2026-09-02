@@ -119,8 +119,11 @@ Prioritizes raw signal over curated narratives. Designed to resist capture by an
   matters to that voice*. See [FREQUENT_DEMOCRACY.md](FREQUENT_DEMOCRACY.md).
 - [x] **AI mediation with human authority:** citizen-owned preference profiles
   that suggest, never decide. See [AI_MEDIATION.md](AI_MEDIATION.md).
-- [ ] **Vote MVP:** one community, one real decision — standing revocable
-  votes, proposition merging, exportable findings. See [VOTE.md](VOTE.md).
+- [x] **Standing votes:** one revocable, changeable vote per person; an
+  append-only ledger with replayable tallies, a living timeline, and
+  "what changed your mind?" migrations. See [VOTE.md](VOTE.md).
+- [ ] **Vote MVP:** one community, one real decision — proposition merging
+  and exportable findings on top of standing votes. See [VOTE.md](VOTE.md).
 
 ### Phase 3: Deliberative Integration
 - [ ] Partner with [Polis](https://pol.is/)-style deliberative tools

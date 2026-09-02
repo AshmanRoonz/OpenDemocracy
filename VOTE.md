@@ -108,7 +108,7 @@ Scope of the first release:
 - Open proposition creation with AI duplicate-merging and visible framing
   variants.
 - Verified-human, anonymous voting; standing votes with change history and
-  "what changed your mind?"
+  "what changed your mind?" — built.
 - The live issues feed (relevance · urgency · activity) — built.
 - Deterministic tallies with denominator, composition, and full distribution.
 - Quorum and scope milestones — built.
@@ -126,7 +126,7 @@ waits until one community has been heard and answered.
 | Verified, anonymous voters | `identity/` |
 | Preference suggestions, human-confirmed | `participation/preferences.py` · [AI_MEDIATION.md](AI_MEDIATION.md) |
 | Full-distribution output | `output/reports.py` |
-| Standing, revocable votes with change history | *next* |
+| Standing, revocable votes with change history | `participation/votes.py` · `/api/vote`, `/tally`, `/timeline`, `/migrations` |
 | Proposition merging and framing variants | *next* |
 | Finding snapshots | *next* |
 

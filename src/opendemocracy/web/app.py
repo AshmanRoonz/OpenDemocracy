@@ -24,6 +24,7 @@ from opendemocracy.models import (
 )
 from opendemocracy.participation.submissions import SubmissionStore
 from opendemocracy.participation.topics import TopicStore
+from opendemocracy.participation.votes import StandingVoteLedger
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -38,6 +39,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 registry = IdentityRegistry()
 topic_store = TopicStore()
 submission_store = SubmissionStore(topic_store, registry)
+vote_ledger = StandingVoteLedger(topic_store, registry)
 
 # Challenge cache: challenge_id → AuthChallenge
 _challenges: dict[str, object] = {}
@@ -124,6 +126,42 @@ class SubmissionOut(BaseModel):
     submission_type: str
     content: str
     submitted_at: str
+
+
+class VoteRequest(BaseModel):
+    """Cast, change, or withdraw a standing vote. ``choice=None`` withdraws."""
+
+    anonymous_id: str
+    challenge_id: str
+    signature: str
+    topic_id: str
+    choice: str | None = None
+    reason: str | None = None  # "what changed your mind?" — optional, never inferred
+
+
+class VoteEventOut(BaseModel):
+    kind: str  # "cast" | "changed" | "withdrawn"
+    previous: str | None
+    choice: str | None
+    reason: str | None
+    at: str
+
+
+class TallyOut(BaseModel):
+    topic_id: str
+    at: str
+    counts: dict[str, int]
+    standing: int
+    ever_participated: int
+    withdrawn: int
+    changes: int
+
+
+class MigrationOut(BaseModel):
+    from_choice: str | None
+    to_choice: str | None
+    count: int
+    reasons: list[str]
 
 
 class TopicCreateRequest(BaseModel):
@@ -332,6 +370,87 @@ def api_topic_submissions(topic_id: str) -> list[SubmissionOut]:
     ]
 
 
+# ---------------------------------------------------------------------------
+# Standing votes (Vote)
+# ---------------------------------------------------------------------------
+
+
+def _verify_or_403(req: VoteRequest):  # type: ignore[no-untyped-def]
+    challenge = _challenges.get(req.challenge_id)
+    if challenge is None:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    verification = verify(challenge, req.signature, req.anonymous_id, registry)  # type: ignore[arg-type]
+    if not verification.verified:
+        raise HTTPException(
+            status_code=403, detail=f"Verification failed: {verification.reason}"
+        )
+    return verification
+
+
+def _tally_out(t) -> TallyOut:  # type: ignore[no-untyped-def]
+    return TallyOut(
+        topic_id=t.topic_id,
+        at=t.at.isoformat(),
+        counts=t.counts,
+        standing=t.standing,
+        ever_participated=t.ever_participated,
+        withdrawn=t.withdrawn,
+        changes=t.changes,
+    )
+
+
+@app.post("/api/vote", response_model=VoteEventOut)
+def api_vote(req: VoteRequest) -> VoteEventOut:
+    """Cast a standing vote, change it, or withdraw it (``choice`` null)."""
+    verification = _verify_or_403(req)
+    try:
+        if req.choice is None:
+            event = vote_ledger.withdraw(verification, req.topic_id, req.reason)
+        else:
+            event = vote_ledger.cast(verification, req.topic_id, req.choice, req.reason)
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return VoteEventOut(
+        kind=event.kind,
+        previous=event.previous,
+        choice=event.choice,
+        reason=event.reason,
+        at=event.at.isoformat(),
+    )
+
+
+@app.get("/api/topics/{topic_id}/tally", response_model=TallyOut)
+def api_topic_tally(topic_id: str) -> TallyOut:
+    """Deterministic current tally, denominator included."""
+    if topic_store.get(topic_id) is None:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return _tally_out(vote_ledger.tally(topic_id))
+
+
+@app.get("/api/topics/{topic_id}/timeline", response_model=list[TallyOut])
+def api_topic_timeline(topic_id: str) -> list[TallyOut]:
+    """The living curve: a tally after every vote event."""
+    if topic_store.get(topic_id) is None:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return [_tally_out(t) for t in vote_ledger.timeline(topic_id)]
+
+
+@app.get("/api/topics/{topic_id}/migrations", response_model=list[MigrationOut])
+def api_topic_migrations(topic_id: str) -> list[MigrationOut]:
+    """Who moved where, and what they said changed their mind."""
+    if topic_store.get(topic_id) is None:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return [
+        MigrationOut(
+            from_choice=m.from_choice,
+            to_choice=m.to_choice,
+            count=m.count,
+            reasons=m.reasons,
+        )
+        for m in vote_ledger.migrations(topic_id)
+    ]
+
+
 @app.get("/api/stats")
 def api_stats() -> dict[str, int]:
     """Quick stats for the dashboard."""
@@ -339,4 +458,7 @@ def api_stats() -> dict[str, int]:
         "enrolled_participants": registry.active_count,
         "total_topics": topic_store.count,
         "total_submissions": submission_store.total_count,
+        "standing_votes": sum(
+            vote_ledger.tally(t.id).standing for t in topic_store.list_open()
+        ),
     }
