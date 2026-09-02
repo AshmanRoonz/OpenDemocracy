@@ -148,17 +148,24 @@ been heard and answered.
 
 ## How this maps to the codebase
 
+The in-browser peer-to-peer app ([`docs/index.html`](docs/index.html)) mirrors
+the standing-vote ledger, the attention reasons it can compute without a
+preference profile, and the Finding payload and hash, as a pure *VOTE ENGINE*
+block. `tests/participation/test_browser_parity.py` runs that block under node
+against the Python modules: same events, same tally, same migrations, same
+canonical JSON, same SHA-256.
+
 | Vote concept | Where it lives |
 |---|---|
 | Connect: live issues feed | `participation/relevance.py` · [FREQUENT_DEMOCRACY.md](FREQUENT_DEMOCRACY.md) |
 | Quorum and scoped regions | `participation/topics.py`, `participation/status.py` |
 | Verified, anonymous voters | `identity/` |
 | Preference suggestions, human-confirmed | `participation/preferences.py` · [AI_MEDIATION.md](AI_MEDIATION.md) |
-| What needs attention? / agenda prompt | `participation/attention.py` · `/api/attention` |
+| What needs attention? / agenda prompt | `participation/attention.py` · `/api/attention` · browser: attention section + create-topic heading |
 | Full-distribution output | `output/reports.py` |
-| Standing, revocable votes with change history | `participation/votes.py` · `/api/vote`, `/tally`, `/timeline`, `/migrations` |
+| Standing, revocable votes with change history | `participation/votes.py` · `/api/vote`, `/tally`, `/timeline`, `/migrations` · browser: `votes` G-Set + ledger replay |
 | Proposition merging and framing variants | `participation/propositions.py` · `/api/propositions/*`, `/api/topics/{id}/proposition` |
-| Finding snapshots | `participation/findings.py` · `/api/topics/{id}/findings`, `/api/findings/{id}[/markdown|/check]` |
+| Finding snapshots | `participation/findings.py` · `/api/topics/{id}/findings`, `/api/findings/{id}[/markdown|/check]` · browser: take / copy / check |
 
 ---
 
