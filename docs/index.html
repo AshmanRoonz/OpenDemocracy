@@ -375,6 +375,26 @@
     font-weight: 500;
   }
   /* Cluster cards */
+  .attention { border-left: 3px solid var(--accent); }
+  .attention .reasons { margin: 0.4rem 0 0; padding-left: 1.1rem; font-size: 0.85rem; color: var(--text2); }
+  .attention .reasons li { margin-bottom: 0.2rem; }
+  .reason-tag {
+    display: inline-block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 0.05rem 0.4rem; border-radius: 3px; background: rgba(120,120,255,0.14); color: var(--accent);
+  }
+  .muted { color: var(--text2); font-size: 0.85rem; }
+  .my-vote { font-size: 0.9rem; margin-bottom: 0.6rem; }
+  .denominator { font-size: 0.78rem; color: var(--text2); margin-top: 0.4rem; }
+  .timeline { font-size: 0.75rem; color: var(--text2); margin-top: 0.5rem; line-height: 1.8; }
+  .timeline .tick { white-space: nowrap; }
+  .timeline .arrow { margin: 0 0.35rem; opacity: 0.6; }
+  .sub-h { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text2); margin: 0.7rem 0 0.3rem; }
+  .moves { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; }
+  .finding-actions { display: flex; gap: 0.5rem; align-items: center; margin: 0.6rem 0 0.4rem; }
+  pre.finding {
+    white-space: pre-wrap; font-size: 0.78rem; line-height: 1.45; background: var(--bg2, rgba(0,0,0,0.05));
+    border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; overflow-x: auto;
+  }
   .cluster-card {
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -458,9 +478,9 @@
   <!-- HERO                                                           -->
   <!-- ============================================================== -->
   <div class="hero">
-    <h2>Your voice. <em>Verified.</em><br>No server needed.</h2>
-    <p>Peer-to-peer democracy. Every browser is the server.
-       One global mesh — open it, participate, and your voice joins humanity's shared record.</p>
+    <h2>Anyone can vote for anything, <em>at any time.</em></h2>
+    <p>Your vote stands until you change it. Every browser is the server; every number is a count of
+       verified individuals. One global mesh — open it, and your voice joins the record.</p>
   </div>
 
   <!-- ============================================================== -->
@@ -480,13 +500,13 @@
       </div>
       <div class="step">
         <div class="num">3</div>
-        <h3>Participate</h3>
-        <p>Submit opinions, ideas, or votes — replicated to all peers.</p>
+        <h3>Vote — and change your mind</h3>
+        <p>A standing vote you can change or withdraw. When you change it, say what changed your mind.</p>
       </div>
       <div class="step">
         <div class="num">4</div>
-        <h3>AI analyzes collectively</h3>
-        <p>Every browser runs sentiment, clustering, and bias detection locally.</p>
+        <h3>Everyone can check the count</h3>
+        <p>Every browser replays the same ledger, shows the denominator, and can freeze a hashed Finding.</p>
       </div>
     </div>
   </section>
@@ -568,8 +588,8 @@
   <!-- ============================================================== -->
   <section id="sec-create-topic">
     <div class="card">
-      <h2>Create a Topic</h2>
-      <p class="desc">Add a question or issue for the group to participate in.</p>
+      <h2>What needs attention that nobody has asked about yet?</h2>
+      <p class="desc">You set the agenda. Name the question in one line and it reaches the people it concerns.</p>
       <button class="secondary" onclick="document.getElementById('create-topic-form').classList.toggle('hidden')">
         + New Topic
       </button>
@@ -628,6 +648,17 @@
   </section>
 
   <!-- ============================================================== -->
+  <!-- WHAT NEEDS ATTENTION?                                          -->
+  <!-- ============================================================== -->
+  <section id="sec-attention" class="hidden">
+    <div class="feed-head">
+      <h2 style="font-size:1.15rem;">What needs attention?</h2>
+      <span class="muted">Everything else flows. These issues name a reason to look.</span>
+    </div>
+    <div id="attention-list"></div>
+  </section>
+
+  <!-- ============================================================== -->
   <!-- TOPICS — LIVE ISSUES FEED                                      -->
   <!-- ============================================================== -->
   <section id="sec-topics">
@@ -680,12 +711,33 @@
       </div>
 
       <div id="form-vote" class="hidden">
+        <p id="my-vote" class="my-vote"></p>
         <div class="field">
-          <label for="sel-vote">Cast your vote</label>
+          <label for="sel-vote">Where do you stand?</label>
           <select id="sel-vote"></select>
         </div>
-        <button class="green" onclick="send('vote')">Cast Vote</button>
+        <div class="field hidden" id="field-reason">
+          <label for="txt-reason">What changed your mind? (optional — attached to your vote, never to a person)</label>
+          <textarea id="txt-reason" rows="2" placeholder="e.g. the cost report"></textarea>
+        </div>
+        <button class="green" id="btn-vote" onclick="send('vote')">Cast vote</button>
+        <button class="secondary hidden" id="btn-withdraw" onclick="withdrawVote()">Withdraw</button>
       </div>
+    </div>
+
+    <div class="card hidden" id="finding-card">
+      <h2>Finding</h2>
+      <p class="desc">
+        Freeze this issue as it stands: the tally with its denominator, the ladder rung reached,
+        and what moved people &mdash; hashed, and reproducible by anyone with the ledger.
+        Below quorum it is <em>signal only</em>.
+      </p>
+      <div class="field" style="max-width:420px;">
+        <label for="txt-finding-note">Note (optional &mdash; why you're taking it)</label>
+        <input type="text" id="txt-finding-note" placeholder="e.g. For the council meeting">
+      </div>
+      <button class="secondary" onclick="takeFinding()">Take a finding</button>
+      <div id="finding-out"></div>
     </div>
 
     <div class="card">
@@ -730,17 +782,22 @@
     complete record. One key per person means one vote per person.
     <br><br>
     <strong>Durable storage:</strong>
-    All replicated data (enrollments, topics, submissions) is persisted to
+    All replicated data (enrollments, topics, submissions, votes) is persisted to
     IndexedDB on your device. When you reopen the page — even after closing
     the browser — your node rehydrates from local storage and shares what
     it knows with peers. Data propagation uses G-Set CRDTs (grow-only sets)
     with set-union merge, so there are no conflicts.
     <br><br>
-    <strong>Local AI processing:</strong>
-    Sentiment analysis, opinion clustering, and bias detection all run
-    locally in your browser. Every peer independently computes the same
-    results from the same replicated data. No external AI service is
-    contacted.
+    <strong>Standing votes:</strong>
+    A vote is a signed, append-only ledger event. Changing or withdrawing it
+    appends another; nothing is ever overwritten. Every peer replays the same
+    ledger, so the tally, the timeline, and a Finding's hash are the same in
+    every browser &mdash; and in the Python backend.
+    <br><br>
+    <strong>Local processing, no groups:</strong>
+    Sentiment scoring and bias detection run locally in your browser. Nothing
+    clusters, segments, or models people into groups: every number is a count
+    of individuals. No external AI service is contacted.
   </div>
 </div>
 
@@ -797,8 +854,8 @@
    ================================================================== */
 
 const DB_NAME = "opendemocracy_p2p";
-const DB_VERSION = 1;
-const STORES = ["enrollments", "topics", "submissions", "seen", "meta"];
+const DB_VERSION = 2;
+const STORES = ["enrollments", "topics", "submissions", "votes", "seen", "meta"];
 
 const store = {
   db: null,
@@ -914,7 +971,8 @@ const store = {
     const e = await store.count("enrollments");
     const t = await store.count("topics");
     const s = await store.count("submissions");
-    return { used: (e + t + s) * 500, quota: 0, entries: e + t + s }; // rough estimate
+    const v = await store.count("votes");
+    return { used: (e + t + s + v) * 500, quota: 0, entries: e + t + s + v }; // rough estimate
   },
 };
 
@@ -982,6 +1040,7 @@ const state = {
   enrollments: new Map(),  // anonymous_id -> { public_key, factors, enrolled_at }
   topics: new Map(),       // topic_id -> { id, title, description, ... }
   submissions: new Map(),  // submission_id -> { id, topic_id, anonymous_id, type, content, signature, ... }
+  votes: new Map(),        // event_id -> standing-vote ledger event (append-only; see VOTE ENGINE)
 
   // Persistence flag
   dbReady: false,
@@ -1053,6 +1112,9 @@ function topicParticipantCount(topicId) {
   for (const [, s] of state.submissions) {
     if (s.topic_id === topicId) ids.add(s.anonymous_id);
   }
+  // Standing voters count too — a withdrawn vote no longer does.
+  const { standing } = ledgerReplay([...state.votes.values()], topicId);
+  for (const [voter, choice] of standing) if (choice !== null) ids.add(voter);
   return ids.size;
 }
 
@@ -1140,6 +1202,270 @@ function compositeScore(t, now) {
 }
 
 /* ==================================================================
+   VOTE ENGINE (mirrored)
+   ------------------------------------------------------------------
+   Pure functions mirroring src/opendemocracy/participation/votes.py,
+   attention.py, and findings.py. No DOM, no network, no state: every
+   function takes the replicated vote events and a topic and returns the
+   same numbers the Python backend returns for the same inputs — checked
+   by tests/participation/test_browser_parity.py, which runs this block
+   under node against the Python implementation.
+
+   A vote in Vote *stands* until its owner changes or withdraws it. The
+   ledger is append-only; the current tally is a replay of it. Every
+   tally carries its denominator. Nothing here groups people: every
+   number is a count of individuals.
+   ================================================================== */
+/* === VOTE ENGINE START === */
+
+// Ledger events replicate as a G-Set: {id, topic_id, anonymous_id, choice
+// (null = withdrawn), reason, at (ISO), nonce, signature}. Replay order is
+// (at, id) so every peer derives the same history from the same set.
+function ledgerEvents(events, topicId, atMs) {
+  const out = [];
+  for (const e of events) {
+    if (e.topic_id !== topicId) continue;
+    if (atMs !== undefined && atMs !== null && Date.parse(e.at) > atMs) continue;
+    out.push(e);
+  }
+  out.sort((a, b) => {
+    const ta = Date.parse(a.at), tb = Date.parse(b.at);
+    if (ta !== tb) return ta - tb;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+  return out;
+}
+
+// Walk a topic's ledger, deriving each event's `previous` and `kind`
+// ("cast" | "changed" | "withdrawn") exactly as the Python ledger records.
+function ledgerReplay(events, topicId, atMs) {
+  const standing = new Map(); // voter -> choice | null
+  const walked = [];
+  for (const e of ledgerEvents(events, topicId, atMs)) {
+    const previous = standing.has(e.anonymous_id) ? standing.get(e.anonymous_id) : null;
+    const kind = e.choice === null ? "withdrawn" : (previous === null ? "cast" : "changed");
+    walked.push({ ...e, previous, kind });
+    standing.set(e.anonymous_id, e.choice);
+  }
+  return { walked, standing };
+}
+
+function standingChoice(events, topicId, voterId) {
+  const { standing } = ledgerReplay(events, topicId);
+  return standing.has(voterId) ? standing.get(voterId) : null;
+}
+
+// Deterministic tally with denominator — mirrors StandingVoteLedger.tally.
+function ledgerTally(events, topic, atMs) {
+  const { walked, standing } = ledgerReplay(events, topic.id, atMs);
+  const counts = new Map();
+  for (const opt of (topic.vote_options || [])) counts.set(opt, 0);
+  let withdrawn = 0;
+  for (const c of standing.values()) {
+    if (c === null) { withdrawn++; continue; }
+    counts.set(c, (counts.get(c) || 0) + 1);
+  }
+  // Declared options first, then any extras in sorted order.
+  const declared = topic.vote_options || [];
+  const extras = [...counts.keys()].filter(k => !declared.includes(k)).sort();
+  const ordered = [...declared, ...extras].map(k => [k, counts.get(k) || 0]);
+  const standingN = ordered.reduce((s, [, n]) => s + n, 0);
+  return {
+    topic_id: topic.id,
+    at: atMs !== undefined && atMs !== null ? atMs
+        : (walked.length ? Date.parse(walked[walked.length - 1].at) : Date.now()),
+    counts: ordered,                       // [[option, people], ...] in stable order
+    standing: standingN,
+    ever_participated: standing.size,
+    withdrawn,
+    changes: walked.filter(e => e.kind === "changed").length,
+    share(option) {
+      if (!standingN) return 0;
+      const row = ordered.find(([k]) => k === option);
+      return row ? row[1] / standingN : 0;
+    },
+  };
+}
+
+// The living curve: one tally after every event.
+function ledgerTimeline(events, topic) {
+  return ledgerEvents(events, topic.id).map(e => ledgerTally(events, topic, Date.parse(e.at)));
+}
+
+// Who moved where, and why. First casts are not migrations. Largest first,
+// ties in ledger order — mirrors StandingVoteLedger.migrations.
+function ledgerMigrations(events, topicId, atMs) {
+  const buckets = new Map();
+  for (const e of ledgerReplay(events, topicId, atMs).walked) {
+    if (e.previous === null) continue;
+    const key = JSON.stringify([e.previous, e.choice]);
+    if (!buckets.has(key)) buckets.set(key, { from: e.previous, to: e.choice, count: 0, reasons: [] });
+    const m = buckets.get(key);
+    m.count++;
+    if (e.reason) m.reasons.push(e.reason);
+  }
+  return [...buckets.values()].sort((a, b) => b.count - a.count);
+}
+
+/* ---- What needs attention? (attention.py) ----
+   Only the reasons the browser can compute without a preference profile.
+   Weights are the same constants as the Python module. */
+const ATTENTION_WEIGHTS = {
+  peers_moving: 2.0, closing_soon: 2.0, stale_vote: 1.5, quorum_near: 1.0, not_yet_heard: 1.0,
+};
+const PEER_MOVE_MIN = 3;
+const STALE_SHIFT = 0.10;
+const QUORUM_NEAR_FRACTION = 0.8;
+const AGENDA_PROMPT = "What needs attention that nobody has asked about yet?";
+
+// status: {closed, closing, target, count, reached, fraction} for the topic;
+// relevant: whether the topic matches the citizen's interests.
+function attentionReasons(events, topic, voterId, status, relevant) {
+  const out = [];
+  if (status.closed) return out;
+  const mine = voterId ? standingChoice(events, topic.id, voterId) : null;
+
+  if (mine === null) {
+    if (relevant && (topic.allow_votes !== false)) {
+      out.push(["not_yet_heard", "This concerns you and you haven't weighed in."]);
+    }
+  } else {
+    const moved = ledgerMigrations(events, topic.id)
+      .filter(m => m.from === mine).reduce((s, m) => s + m.count, 0);
+    if (moved >= PEER_MOVE_MIN) {
+      out.push(["peers_moving", moved + " people who voted " + JSON.stringify(mine) +
+        " have since moved — see what changed their minds."]);
+    }
+    const myEvents = ledgerEvents(events, topic.id).filter(e => e.anonymous_id === voterId);
+    const since = Date.parse(myEvents[myEvents.length - 1].at);
+    const then = ledgerTally(events, topic, since), now = ledgerTally(events, topic);
+    if (Math.abs(now.share(mine) - then.share(mine)) >= STALE_SHIFT) {
+      out.push(["stale_vote", "Support for " + JSON.stringify(mine) + " moved from " +
+        Math.round(then.share(mine) * 100) + "% to " + Math.round(now.share(mine) * 100) +
+        "% since you chose."]);
+    }
+  }
+  if (status.closing) out.push(["closing_soon", "The decision window is closing."]);
+  if (status.target !== null && !status.reached && (status.fraction || 0) >= QUORUM_NEAR_FRACTION) {
+    out.push(["quorum_near", status.count + "/" + status.target +
+      " to quorum — a few more voices make this legitimate."]);
+  }
+  return out;
+}
+
+function attentionScore(reasons) {
+  return reasons.reduce((s, [r]) => s + (ATTENTION_WEIGHTS[r] || 0), 0);
+}
+
+/* ---- Findings (findings.py) ----
+   A frozen, hashed snapshot. The payload is serialised exactly as Python's
+   json.dumps(sort_keys=True, separators=(",", ":")) so the SHA-256 is the
+   same in both runtimes for the same ledger. */
+const METHOD_VERSION = 1;
+const MIGRATIONS_KEPT = 5;
+
+function ladderRung(topic, status) {
+  if (!status.reached) return "signal";
+  return topic.region ? "scoped" : "quorum";
+}
+
+// Python writes floats with a trailing ".0" when integral; JS does not.
+// Values wrapped in PyFloat serialise the Python way.
+class PyFloat { constructor(v) { this.v = v; } }
+function pyFloat(v) { return new PyFloat(Math.round(v * 1e4) / 1e4); }
+
+function pyIso(ms) {
+  // datetime.isoformat() for a UTC-aware time: microseconds only when non-zero.
+  const d = new Date(ms);
+  const p = (n, w) => String(n).padStart(w, "0");
+  let s = d.getUTCFullYear() + "-" + p(d.getUTCMonth() + 1, 2) + "-" + p(d.getUTCDate(), 2) +
+    "T" + p(d.getUTCHours(), 2) + ":" + p(d.getUTCMinutes(), 2) + ":" + p(d.getUTCSeconds(), 2);
+  const msPart = d.getUTCMilliseconds();
+  if (msPart) s += "." + p(msPart, 3) + "000";
+  return s + "+00:00";
+}
+
+function canonicalJSON(v) {
+  if (v instanceof PyFloat) {
+    return Number.isInteger(v.v) ? v.v.toFixed(1) : String(v.v);
+  }
+  if (v === null || v === undefined) return "null";
+  if (typeof v === "number") return String(v);
+  if (typeof v === "boolean") return v ? "true" : "false";
+  if (typeof v === "string") {
+    return JSON.stringify(v).replace(/[\u007f-\uffff]/g, c =>
+      "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  }
+  if (Array.isArray(v)) return "[" + v.map(canonicalJSON).join(",") + "]";
+  const keys = Object.keys(v).sort();
+  return "{" + keys.map(k => canonicalJSON(k) + ":" + canonicalJSON(v[k])).join(",") + "}";
+}
+
+function tallyDict(t) {
+  const counts = {}, shares = {};
+  for (const [k, n] of t.counts) { counts[k] = n; shares[k] = pyFloat(t.share(k)); }
+  return {
+    counts, shares, standing: t.standing, ever_participated: t.ever_participated,
+    withdrawn: t.withdrawn, changes: t.changes,
+  };
+}
+
+// status must be computed for the same instant as atMs.
+function findingPayload(events, topic, atMs, status) {
+  const tally = ledgerTally(events, topic, atMs);
+  return {
+    method_version: METHOD_VERSION,
+    topic_id: topic.id,
+    title: topic.title,
+    taken_at: pyIso(atMs),
+    rung: ladderRung(topic, status),
+    region: topic.region || null,
+    quorum_target: (topic.quorum && topic.quorum > 0) ? topic.quorum : null,
+    tally: tallyDict(tally),
+    migrations: ledgerMigrations(events, topic.id, atMs).slice(0, MIGRATIONS_KEPT)
+      .map(m => ({ from: m.from, to: m.to, count: m.count, reasons: m.reasons.slice() })),
+    proposition: null,
+    ledger_events: ledgerEvents(events, topic.id, atMs).length,
+  };
+}
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function findingMarkdown(p, hash, note) {
+  const citable = p.rung !== "signal";
+  const pct = f => Math.round((f instanceof PyFloat ? f.v : f) * 100) + "%";
+  const L = ["# Finding: " + p.title, "",
+    "*Taken " + p.taken_at.slice(0, 16).replace("T", " ") + " UTC · rung: **" + p.rung + "** · " +
+    (citable ? "citable" : "signal only — quorum not reached") + "*", ""];
+  if (note) L.push("> " + note, "");
+  L.push("## Where people stand", "", "| Option | People | Share |", "|---|---|---|");
+  for (const k of Object.keys(p.tally.counts)) {
+    L.push("| " + k + " | " + p.tally.counts[k] + " | " + pct(p.tally.shares[k]) + " |");
+  }
+  const t = p.tally;
+  L.push("", "**Denominator:** " + t.standing + " verified people standing, " + t.ever_participated +
+    " ever took part, " + t.withdrawn + " withdrew, " + t.changes + " changed their vote. Scope: " +
+    (p.region || "unscoped") + ". " +
+    (p.quorum_target ? t.standing + "/" + p.quorum_target + " to quorum" : "no quorum set") + ".", "");
+  if (p.migrations.length) {
+    L.push("## What moved people", "");
+    for (const m of p.migrations) {
+      L.push("- " + m.count + " moved " + m.from + " → " + (m.to === null ? "withdrew" : m.to) +
+        (m.reasons.length ? ' — "' + m.reasons[0] + '"' : ""));
+    }
+    L.push("");
+  }
+  L.push("## Method", "", "Pure replay of " + p.ledger_events + " ledger events up to the moment above (method v" +
+    p.method_version + "). Counts are people, not votes; one person, one standing vote. Anyone with the ledger reproduces this exactly.",
+    "", "`sha256:" + hash + "`");
+  return L.join("\n");
+}
+/* === VOTE ENGINE END === */
+
+/* ==================================================================
    STATE HELPERS (write-through to IndexedDB)
    ================================================================== */
 
@@ -1164,12 +1490,20 @@ async function addSubmission(id, data) {
   return true;
 }
 
+async function addVote(id, data) {
+  if (state.votes.has(id)) return false;
+  state.votes.set(id, data);
+  await store.put("votes", id, data);
+  return true;
+}
+
 // Rehydrate in-memory state from IndexedDB
 async function rehydrate() {
-  const [enrollments, topics, submissions] = await Promise.all([
+  const [enrollments, topics, submissions, votes] = await Promise.all([
     store.getAll("enrollments"),
     store.getAll("topics"),
     store.getAll("submissions"),
+    store.getAll("votes"),
     seenSet.load(),
   ]);
 
@@ -1186,6 +1520,10 @@ async function rehydrate() {
     state.submissions.set(id, data);
     loaded++;
   }
+  for (const [id, data] of votes) {
+    state.votes.set(id, data);
+    loaded++;
+  }
 
   state.dbReady = true;
   return loaded;
@@ -1197,6 +1535,7 @@ function stateDigest() {
     enrollmentIds: [...state.enrollments.keys()],
     topicIds: [...state.topics.keys()],
     submissionIds: [...state.submissions.keys()],
+    voteIds: [...state.votes.keys()],
   };
 }
 
@@ -1379,6 +1718,9 @@ async function handleMessage(msg, fromPeer) {
     case "submit":
       await handleSubmitMsg(msg);
       break;
+    case "vote":
+      await handleVoteMsg(msg);
+      break;
   }
 }
 
@@ -1389,6 +1731,7 @@ async function handleDigest(msg, fromPeer) {
   const remoteEnrollIds = new Set(remote.enrollmentIds);
   const remoteTopicIds = new Set(remote.topicIds);
   const remoteSubIds = new Set(remote.submissionIds);
+  const remoteVoteIds = new Set(remote.voteIds || []);
 
   // What we have that they don't
   const missingEnrollments = [];
@@ -1403,19 +1746,25 @@ async function handleDigest(msg, fromPeer) {
   for (const [id, data] of state.submissions) {
     if (!remoteSubIds.has(id)) missingSubmissions.push([id, data]);
   }
+  const missingVotes = [];
+  for (const [id, data] of state.votes) {
+    if (!remoteVoteIds.has(id)) missingVotes.push([id, data]);
+  }
 
   const conn = state.connections.get(fromPeer);
   if (!conn) return;
 
   // Send them what they're missing
-  if (missingEnrollments.length || missingTopics.length || missingSubmissions.length) {
-    netLog("Sending " + (missingEnrollments.length + missingTopics.length + missingSubmissions.length) + " missing entries to " + fromPeer, "ok");
+  const missingN = missingEnrollments.length + missingTopics.length + missingSubmissions.length + missingVotes.length;
+  if (missingN) {
+    netLog("Sending " + missingN + " missing entries to " + fromPeer, "ok");
     conn.send({
       type: "sync",
       msgId: generateId(),
       enrollments: missingEnrollments,
       topics: missingTopics,
       submissions: missingSubmissions,
+      votes: missingVotes,
       peerList: [...state.connections.keys(), state.myPeerId],
     });
   }
@@ -1424,15 +1773,18 @@ async function handleDigest(msg, fromPeer) {
   const weNeedEnrollIds = remote.enrollmentIds.filter(id => !state.enrollments.has(id));
   const weNeedTopicIds = remote.topicIds.filter(id => !state.topics.has(id));
   const weNeedSubIds = remote.submissionIds.filter(id => !state.submissions.has(id));
+  const weNeedVoteIds = (remote.voteIds || []).filter(id => !state.votes.has(id));
 
-  if (weNeedEnrollIds.length || weNeedTopicIds.length || weNeedSubIds.length) {
-    netLog("Requesting " + (weNeedEnrollIds.length + weNeedTopicIds.length + weNeedSubIds.length) + " missing entries from " + fromPeer, "ok");
+  const needN = weNeedEnrollIds.length + weNeedTopicIds.length + weNeedSubIds.length + weNeedVoteIds.length;
+  if (needN) {
+    netLog("Requesting " + needN + " missing entries from " + fromPeer, "ok");
     conn.send({
       type: "digest-request",
       msgId: generateId(),
       enrollmentIds: weNeedEnrollIds,
       topicIds: weNeedTopicIds,
       submissionIds: weNeedSubIds,
+      voteIds: weNeedVoteIds,
     });
   }
 
@@ -1458,14 +1810,18 @@ async function handleDigestRequest(msg, fromPeer) {
   const submissions = (msg.submissionIds || [])
     .filter(id => state.submissions.has(id))
     .map(id => [id, state.submissions.get(id)]);
+  const votes = (msg.voteIds || [])
+    .filter(id => state.votes.has(id))
+    .map(id => [id, state.votes.get(id)]);
 
-  if (enrollments.length || topics.length || submissions.length) {
+  if (enrollments.length || topics.length || submissions.length || votes.length) {
     conn.send({
       type: "sync",
       msgId: generateId(),
       enrollments,
       topics,
       submissions,
+      votes,
       peerList: [...state.connections.keys(), state.myPeerId],
     });
   }
@@ -1517,6 +1873,18 @@ async function handleSync(msg, fromPeer) {
     }
   }
   if (newSubmissions.length) await store.putBatch("submissions", newSubmissions);
+
+  // Merge standing-vote events (verify each one). The ledger is a G-Set:
+  // order is derived from (at, id) at replay time, so arrival order is moot.
+  const newVotes = [];
+  for (const [id, data] of (msg.votes || [])) {
+    if (!state.votes.has(id) && await voteEventValid(data)) {
+      state.votes.set(id, data);
+      newVotes.push([id, data]);
+      added++;
+    }
+  }
+  if (newVotes.length) await store.putBatch("votes", newVotes);
 
   if (added > 0) {
     netLog("Merged " + added + " new entries from " + fromPeer, "ok");
@@ -1589,6 +1957,33 @@ async function handleSubmitMsg(msg) {
   }
 
   await addSubmission(msg.submission.id, msg.submission);
+  broadcast(msg);
+  refreshAll();
+  updateStorageStats();
+}
+
+// A vote event is accepted only if it is signed by an enrolled identity and
+// well-formed for its topic. Nothing else is trusted from the wire: `previous`
+// and `kind` are derived at replay, never read from the event.
+async function voteEventValid(ev) {
+  if (!ev || !ev.id || !ev.topic_id || !ev.anonymous_id || !ev.at || !ev.nonce || !ev.signature) return false;
+  const enrollment = state.enrollments.get(ev.anonymous_id);
+  if (!enrollment) return false;
+  const topic = state.topics.get(ev.topic_id);
+  if (!topic || topic.allow_votes === false) return false;
+  if (ev.choice !== null && topic.vote_options && topic.vote_options.length &&
+      !topic.vote_options.includes(ev.choice)) return false;
+  return verifySignature(enrollment.public_key, ev.nonce, ev.signature);
+}
+
+async function handleVoteMsg(msg) {
+  const ev = msg.event;
+  if (!ev || state.votes.has(ev.id)) return;
+  if (!(await voteEventValid(ev))) {
+    netLog("Rejected invalid vote event", "warn");
+    return;
+  }
+  await addVote(ev.id, ev);
   broadcast(msg);
   refreshAll();
   updateStorageStats();
@@ -1690,14 +2085,52 @@ async function createTopic() {
   flash("Topic created and shared with all peers.", "ok");
 }
 
+// Cast a standing vote, change it, or withdraw it (choice === null).
+// Mirrors StandingVoteLedger.cast / withdraw: same choice twice is a no-op,
+// there is nothing to withdraw without a standing vote, and the reason is the
+// citizen's own answer to "what changed your mind?" — never inferred.
+async function castVote(choice) {
+  if (!me) { flash("You must verify your identity first.", "err"); return; }
+  if (!currentTopic) return;
+  const t = currentTopic;
+  if (isClosed(t)) { flash("This issue is closed.", "err"); return; }
+  const events = [...state.votes.values()];
+  const previous = standingChoice(events, t.id, me.anonymous_id);
+  if (choice === null && previous === null) { flash("You have no standing vote to withdraw.", "err"); return; }
+  if (choice !== null && previous === choice) { flash("Your vote already stands at " + choice + ".", "err"); return; }
+  const reason = document.getElementById("txt-reason").value.trim() || null;
+
+  const nonce = generateId(32);
+  const signature = await signMessage(me.public_key, nonce);
+  const ev = {
+    id: generateId(12),
+    topic_id: t.id,
+    anonymous_id: me.anonymous_id,
+    choice,
+    reason,
+    at: new Date().toISOString(),
+    nonce,
+    signature,
+  };
+  await addVote(ev.id, ev);
+  broadcast({ type: "vote", event: ev });
+  document.getElementById("txt-reason").value = "";
+  refreshAll();
+  updateStorageStats();
+  flash(choice === null ? "Vote withdrawn." :
+        (previous === null ? "Vote cast. It stands until you change it." : "Vote changed."), "ok");
+}
+
+function withdrawVote() { return castVote(null); }
+
 async function send(type) {
   if (!me) { flash("You must verify your identity first.", "err"); return; }
   if (!currentTopic) return;
+  if (type === "vote") return castVote(document.getElementById("sel-vote").value);
 
   let content = "";
   if (type === "opinion") content = document.getElementById("txt-opinion").value.trim();
   else if (type === "idea") content = document.getElementById("txt-idea").value.trim();
-  else if (type === "vote") content = document.getElementById("sel-vote").value;
   if (!content) { flash("Please enter your " + type + " first.", "err"); return; }
 
   // Check if already submitted this type for this topic
@@ -1800,12 +2233,106 @@ function pickFactor(el) {
 }
 
 function refreshAll() {
+  renderAttention();
   renderTopics();
   if (currentTopic) {
+    renderMyVote();
     renderSubmissions(currentTopic.id);
     runAnalysis(currentTopic.id);
+    document.getElementById("finding-out").innerHTML = "";
   }
   updateStats();
+}
+
+/* ---- What needs attention? ----
+   Mirrors attention.py for the reasons a browser can compute: each item
+   names its reasons, silence is a valid answer, and the same question is
+   asked back of the citizen as the heading of the create-topic card. */
+function renderAttention() {
+  const el = document.getElementById("attention-list");
+  const now = Date.now();
+  const events = [...state.votes.values()];
+  const items = [];
+  for (const t of state.topics.values()) {
+    const st = topicStatus(t, now);
+    const reasons = attentionReasons(events, t, me ? me.anonymous_id : null, st, matchesInterests(t));
+    if (reasons.length) items.push({ t, reasons, score: attentionScore(reasons) });
+  }
+  items.sort((a, b) => (b.score - a.score) || (relevanceScore(b.t) - relevanceScore(a.t)) ||
+    (new Date(b.t.created_at) - new Date(a.t.created_at)));
+  document.getElementById("sec-attention").classList.toggle("hidden", !items.length);
+  el.innerHTML = items.map(({ t, reasons }) =>
+    '<div class="card attention" role="button" tabindex="0" data-id="' + t.id + '"' +
+    ' onclick="openTopic(\'' + t.id + '\')" onkeydown="topicKey(event, \'' + t.id + '\')">' +
+    '<h3>' + esc(t.title) + '</h3>' +
+    '<ul class="reasons">' + reasons.map(([r, why]) =>
+      '<li><span class="reason-tag">' + esc(r.replace(/_/g, " ")) + '</span> ' + esc(why) + '</li>').join("") +
+    '</ul></div>'
+  ).join("");
+}
+
+/* ---- Your standing vote ---- */
+function renderMyVote() {
+  const t = currentTopic;
+  const el = document.getElementById("my-vote");
+  if (!t || !t.allow_votes) { el.innerHTML = ""; return; }
+  const mine = me ? standingChoice([...state.votes.values()], t.id, me.anonymous_id) : null;
+  const btn = document.getElementById("btn-vote");
+  const wd = document.getElementById("btn-withdraw");
+  const reason = document.getElementById("field-reason");
+  if (mine === null) {
+    el.innerHTML = '<span class="muted">You have no standing vote on this issue.</span>';
+    btn.textContent = "Cast vote";
+    wd.classList.add("hidden");
+    reason.classList.add("hidden");
+  } else {
+    el.innerHTML = 'Your vote stands at <strong>' + esc(mine) + '</strong>. Change it any time.';
+    btn.textContent = "Change vote";
+    wd.classList.remove("hidden");
+    reason.classList.remove("hidden");
+  }
+}
+
+/* ---- Findings: freeze the issue as it stands ---- */
+let lastFinding = null;
+
+async function takeFinding() {
+  const t = currentTopic;
+  if (!t || !t.allow_votes) return;
+  const atMs = Date.now();
+  const events = [...state.votes.values()];
+  const status = topicStatus(t, atMs);
+  const payload = findingPayload(events, t, atMs, status);
+  const hash = await sha256Hex(canonicalJSON(payload));
+  const note = document.getElementById("txt-finding-note").value.trim() || null;
+  lastFinding = { payload, hash, note };
+  const md = findingMarkdown(payload, hash, note);
+  document.getElementById("finding-out").innerHTML =
+    '<div class="finding-actions">' +
+    '<button class="small secondary" onclick="copyFinding()">Copy Markdown</button>' +
+    '<button class="small secondary" onclick="checkFinding()">Check</button>' +
+    '<span id="finding-check" class="muted"></span></div>' +
+    '<pre class="finding">' + esc(md) + '</pre>';
+}
+
+async function copyFinding() {
+  if (!lastFinding) return;
+  const md = findingMarkdown(lastFinding.payload, lastFinding.hash, lastFinding.note);
+  try { await navigator.clipboard.writeText(md); flash("Finding copied.", "ok"); }
+  catch (e) { flash("Copy failed — select the text and copy manually.", "err"); }
+}
+
+// Re-derive the finding from the ledger at its own taken_at and compare hashes
+// — the browser-side version of FindingStore.reproduce.
+async function checkFinding() {
+  if (!lastFinding) return;
+  const t = state.topics.get(lastFinding.payload.topic_id);
+  const atMs = Date.parse(lastFinding.payload.taken_at);
+  const fresh = findingPayload([...state.votes.values()], t, atMs, topicStatus(t, atMs));
+  const hash = await sha256Hex(canonicalJSON(fresh));
+  const ok = hash === lastFinding.hash;
+  document.getElementById("finding-check").textContent =
+    ok ? "✓ reproduced from the ledger — hash matches" : "✗ does not reproduce — the ledger or record changed";
 }
 
 function sortedTopics(now) {
@@ -2004,8 +2531,11 @@ function openTopic(id) {
     document.getElementById("sel-vote").innerHTML =
       t.vote_options.map(o => '<option value="' + esc(o) + '">' + esc(o) + '</option>').join("");
   }
-
+  document.getElementById("finding-card").classList.toggle("hidden", !t.allow_votes);
+  document.getElementById("finding-out").innerHTML = "";
+  renderMyVote();
   renderSubmissions(id);
+  renderAttention();
 }
 
 function setTab(t) {
@@ -2170,73 +2700,6 @@ function scoreSentiment(text) {
 
 /* ---- K-Means clustering (pure JS, no deps) ---- */
 
-function kmeans(vectors, k, maxIter = 50) {
-  const n = vectors.length;
-  const dim = vectors[0].length;
-  if (n <= k) {
-    // Fewer points than clusters — each point is its own cluster
-    return vectors.map((_, i) => i);
-  }
-
-  // Initialize centroids via k-means++ seeding
-  const centroids = [vectors[Math.floor(Math.random() * n)].slice()];
-  while (centroids.length < k) {
-    const dists = vectors.map(v => {
-      let minD = Infinity;
-      for (const c of centroids) {
-        let d = 0;
-        for (let i = 0; i < dim; i++) d += (v[i] - c[i]) ** 2;
-        minD = Math.min(minD, d);
-      }
-      return minD;
-    });
-    const total = dists.reduce((a, b) => a + b, 0);
-    let r = Math.random() * total;
-    for (let i = 0; i < n; i++) {
-      r -= dists[i];
-      if (r <= 0) { centroids.push(vectors[i].slice()); break; }
-    }
-    if (centroids.length === k - 1 + 1) break; // safety
-  }
-  // Pad if needed
-  while (centroids.length < k) centroids.push(vectors[Math.floor(Math.random() * n)].slice());
-
-  const labels = new Array(n).fill(0);
-
-  for (let iter = 0; iter < maxIter; iter++) {
-    let changed = false;
-
-    // Assign
-    for (let i = 0; i < n; i++) {
-      let bestK = 0, bestD = Infinity;
-      for (let c = 0; c < k; c++) {
-        let d = 0;
-        for (let j = 0; j < dim; j++) d += (vectors[i][j] - centroids[c][j]) ** 2;
-        if (d < bestD) { bestD = d; bestK = c; }
-      }
-      if (labels[i] !== bestK) { labels[i] = bestK; changed = true; }
-    }
-
-    if (!changed) break;
-
-    // Update centroids
-    const sums = Array.from({ length: k }, () => new Array(dim).fill(0));
-    const counts = new Array(k).fill(0);
-    for (let i = 0; i < n; i++) {
-      counts[labels[i]]++;
-      for (let j = 0; j < dim; j++) sums[labels[i]][j] += vectors[i][j];
-    }
-    for (let c = 0; c < k; c++) {
-      if (counts[c] === 0) continue;
-      for (let j = 0; j < dim; j++) centroids[c][j] = sums[c][j] / counts[c];
-    }
-  }
-
-  return labels;
-}
-
-/* ---- Bias detection (mirrors processing/bias.py) ---- */
-
 function detectBias(submissions) {
   const warnings = [];
   if (submissions.length > 0 && submissions.length < 5) {
@@ -2287,24 +2750,6 @@ function detectBias(submissions) {
 
 /* ---- Cluster labeling heuristic ---- */
 
-function labelCluster(members) {
-  // Use the dominant stance to name the cluster
-  let supportCount = 0, opposeCount = 0, neutralCount = 0;
-  for (const m of members) {
-    if (m.scores.stance > 0.03) supportCount++;
-    else if (m.scores.stance < -0.03) opposeCount++;
-    else neutralCount++;
-  }
-  const total = members.length;
-  if (supportCount > opposeCount && supportCount > neutralCount) {
-    return "Supportive voices (" + Math.round(supportCount / total * 100) + "%)";
-  }
-  if (opposeCount > supportCount && opposeCount > neutralCount) {
-    return "Critical voices (" + Math.round(opposeCount / total * 100) + "%)";
-  }
-  return "Nuanced / mixed (" + Math.round(neutralCount / total * 100) + "%)";
-}
-
 /* ---- Main analysis runner ---- */
 
 function runAnalysis(topicId) {
@@ -2315,13 +2760,13 @@ function runAnalysis(topicId) {
   }
 
   const allSubs = [...state.submissions.values()].filter(s => s.topic_id === topicId);
-  if (!allSubs.length) {
-    el.innerHTML = '<div class="analysis-empty">No submissions yet. Analysis begins automatically as opinions arrive.</div>';
+  const anyVotes = [...state.votes.values()].some(e => e.topic_id === topicId);
+  if (!allSubs.length && !anyVotes) {
+    el.innerHTML = '<div class="analysis-empty">No submissions or votes yet. Analysis begins automatically as voices arrive.</div>';
     return;
   }
 
   const opinions = allSubs.filter(s => s.submission_type === "opinion" || s.submission_type === "idea");
-  const votes = allSubs.filter(s => s.submission_type === "vote");
   const topic = state.topics.get(topicId);
 
   // Score all opinions
@@ -2346,53 +2791,42 @@ function runAnalysis(topicId) {
     neutralPct = 100 - supportPct - opposePct;
   }
 
-  // Cluster opinions
-  let clusterHTML = "";
-  if (scored.length >= 3) {
-    const k = Math.min(Math.max(2, Math.floor(scored.length / 3)), 5);
-    const vectors = scored.map(s => [s.scores.stance, s.scores.urgency, s.scores.certainty, s.scores.intensity]);
-    const labels = kmeans(vectors, k);
-
-    const clusters = {};
-    for (let i = 0; i < scored.length; i++) {
-      const cid = labels[i];
-      if (!clusters[cid]) clusters[cid] = [];
-      clusters[cid].push(scored[i]);
-    }
-
-    const clusterEntries = Object.entries(clusters).sort((a, b) => b[1].length - a[1].length);
-    clusterHTML = clusterEntries.map(([cid, members]) => {
-      const label = labelCluster(members);
-      const rep = members.sort((a, b) => b.content.length - a.content.length)[0];
-      const repText = rep.content.length > 150 ? rep.content.slice(0, 150) + "..." : rep.content;
-      return '<div class="cluster-card">' +
-        '<h4>' + esc(label) + '</h4>' +
-        '<div class="cluster-size">' + members.length + ' of ' + scored.length + ' opinions</div>' +
-        '<div class="cluster-rep">"' + esc(repText) + '"</div>' +
-        '</div>';
-    }).join("");
-  } else if (scored.length > 0) {
-    clusterHTML = '<div style="color:var(--text2); font-size:0.82rem;">Need at least 3 opinions for clustering. Currently: ' + scored.length + '.</div>';
-  }
-
-  // Vote tally
+  // Standing-vote tally from the ledger — people, not votes, denominator shown.
   let voteHTML = "";
-  if (votes.length > 0 && topic && topic.vote_options && topic.vote_options.length) {
-    const tally = {};
-    for (const opt of topic.vote_options) tally[opt] = 0;
-    for (const v of votes) {
-      if (tally[v.content] !== undefined) tally[v.content]++;
-      else tally[v.content] = (tally[v.content] || 0) + 1;
-    }
-    const maxVotes = Math.max(...Object.values(tally), 1);
-    voteHTML = Object.entries(tally).map(([opt, count]) => {
-      const pct = Math.round(count / votes.length * 100);
-      return '<div class="bar-row">' +
-        '<span class="bar-label">' + esc(opt) + '</span>' +
-        '<span class="bar-track"><span class="bar-fill support" style="width:' + (count / maxVotes * 100) + '%"></span></span>' +
-        '<span class="bar-value">' + count + ' (' + pct + '%)</span>' +
+  const events = [...state.votes.values()];
+  const tally = topic && topic.allow_votes ? ledgerTally(events, topic) : null;
+  if (tally && tally.ever_participated > 0) {
+    const maxN = Math.max(...tally.counts.map(([, n]) => n), 1);
+    voteHTML = tally.counts.map(([opt, n]) =>
+      '<div class="bar-row">' +
+      '<span class="bar-label">' + esc(opt) + '</span>' +
+      '<span class="bar-track"><span class="bar-fill support" style="width:' + (n / maxN * 100) + '%"></span></span>' +
+      '<span class="bar-value">' + n + ' (' + Math.round(tally.share(opt) * 100) + '%)</span>' +
+      '</div>'
+    ).join("");
+    voteHTML += '<div class="denominator">' + tally.standing + ' standing &middot; ' +
+      tally.ever_participated + ' ever took part &middot; ' + tally.withdrawn + ' withdrew &middot; ' +
+      tally.changes + ' changed their vote</div>';
+
+    // The living curve: standing count per option after each event.
+    const curve = ledgerTimeline(events, topic);
+    if (curve.length > 1) {
+      voteHTML += '<div class="timeline">' + curve.map(pt =>
+        '<span class="tick" title="' + new Date(pt.at).toLocaleString() + '">' +
+        pt.counts.map(([o, n]) => esc(o) + ' ' + n).join(' / ') + '</span>').join('<span class="arrow">&rarr;</span>') +
         '</div>';
-    }).join("");
+    }
+
+    // What moved people — argument efficacy as vote migration.
+    const moves = ledgerMigrations(events, topic.id);
+    if (moves.length) {
+      voteHTML += '<h4 class="sub-h">What changed minds</h4><ul class="moves">' + moves.map(m =>
+        '<li><strong>' + m.count + '</strong> moved ' + esc(m.from) + ' &rarr; ' +
+        (m.to === null ? 'withdrew' : esc(m.to)) +
+        (m.reasons.length ? ' &mdash; <em>&ldquo;' + esc(m.reasons[0]) + '&rdquo;</em>' +
+          (m.reasons.length > 1 ? ' <span class="muted">(+' + (m.reasons.length - 1) + ' more)</span>' : '') : '') +
+        '</li>').join("") + '</ul>';
+    }
   }
 
   // Bias warnings
@@ -2441,16 +2875,8 @@ function runAnalysis(topicId) {
   // Vote results (if any)
   if (voteHTML) {
     html += '<div class="analysis-box" style="margin-bottom:1rem;">';
-    html += '<h3>Vote Results (' + votes.length + ' votes)</h3>';
+    html += '<h3>Where people stand (' + tally.standing + ' standing)</h3>';
     html += voteHTML;
-    html += '</div>';
-  }
-
-  // Opinion clusters
-  if (clusterHTML) {
-    html += '<div style="margin-bottom:1rem;">';
-    html += '<h3 style="font-size:0.85rem; color:var(--text2); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.6rem;">Opinion Clusters</h3>';
-    html += clusterHTML;
     html += '</div>';
   }
 
@@ -2464,8 +2890,8 @@ function runAnalysis(topicId) {
 
   // Methodology note
   html += '<div style="font-size:0.75rem; color:var(--text2); margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">';
-  html += 'Analysis runs locally in your browser using lexicon-based sentiment scoring and K-Means clustering on sentiment feature vectors. ';
-  html += 'All peers compute the same results independently from the same replicated data. No external AI service is contacted.';
+  html += 'Analysis runs locally in your browser: lexicon-based sentiment scoring per opinion and a deterministic replay of the standing-vote ledger. ';
+  html += 'Every number is a count of individuals — nothing here groups people. All peers compute the same results independently from the same replicated data. No external AI service is contacted.';
   html += '</div>';
 
   el.innerHTML = html;

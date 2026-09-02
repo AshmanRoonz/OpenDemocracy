@@ -57,6 +57,10 @@ This logic lives in exactly one place per runtime, kept in lockstep:
 
 Both produce identical orderings for identical inputs (covered by
 `tests/participation/test_relevance.py` and a cross-runtime numeric check).
+The same page also mirrors Vote's standing-vote ledger, attention reasons, and
+Finding hash — see [VOTE.md](VOTE.md) and
+`tests/participation/test_browser_parity.py`, which runs the browser block
+under node against the Python modules.
 
 ## What a citizen experiences
 

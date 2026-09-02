@@ -53,9 +53,11 @@ jobs, and no others:
 
 1. **Connect** — bring each issue to the people it concerns, when their input
    can still matter (the *frequent democracy* feed), and bridge people across
-   disagreement so the strongest opposing reasons meet. Vote deliberately does
-   **not** cluster people who already agree: that is the outrage-machine
-   primitive, and it stays out.
+   disagreement so the strongest opposing reasons meet — individual to
+   individual, reasons attached to votes. Vote deliberately does **not**
+   cluster people, whether they agree or disagree: grouping people who agree
+   is the outrage-machine primitive, and grouping at all is a model of who
+   belongs with whom that Vote refuses to build.
 2. **Organize** — merge duplicate propositions so the signal doesn't fragment,
    while keeping wording variants visible, because "ban X" and "allow X"
    polling differently is framing data worth showing.
@@ -80,6 +82,13 @@ you confirm or override, never a vote cast for you.
 - **Not a weapon.** Propositions are about policies and choices — never about
   persons or groups as targets. This is a founding rule, not a moderation
   patch.
+- **Not a sorter of people.** This is individual voting. Vote never clusters,
+  segments, or models people into groups — not in the interface and not as an
+  internal step. Every number is a count of individuals. "People who voted
+  Yes" is a tally, not a group; nothing is ever inferred about who belongs
+  with whom.
+- **Not a forum.** Reasons are attached to votes, never addressed to people.
+  There are no replies, no threads, no escalation.
 
 ## Flow, attention, choice
 
@@ -139,17 +148,24 @@ been heard and answered.
 
 ## How this maps to the codebase
 
+The in-browser peer-to-peer app ([`docs/index.html`](docs/index.html)) mirrors
+the standing-vote ledger, the attention reasons it can compute without a
+preference profile, and the Finding payload and hash, as a pure *VOTE ENGINE*
+block. `tests/participation/test_browser_parity.py` runs that block under node
+against the Python modules: same events, same tally, same migrations, same
+canonical JSON, same SHA-256.
+
 | Vote concept | Where it lives |
 |---|---|
 | Connect: live issues feed | `participation/relevance.py` · [FREQUENT_DEMOCRACY.md](FREQUENT_DEMOCRACY.md) |
 | Quorum and scoped regions | `participation/topics.py`, `participation/status.py` |
 | Verified, anonymous voters | `identity/` |
 | Preference suggestions, human-confirmed | `participation/preferences.py` · [AI_MEDIATION.md](AI_MEDIATION.md) |
-| What needs attention? / agenda prompt | `participation/attention.py` · `/api/attention` |
+| What needs attention? / agenda prompt | `participation/attention.py` · `/api/attention` · browser: attention section + create-topic heading |
 | Full-distribution output | `output/reports.py` |
-| Standing, revocable votes with change history | `participation/votes.py` · `/api/vote`, `/tally`, `/timeline`, `/migrations` |
+| Standing, revocable votes with change history | `participation/votes.py` · `/api/vote`, `/tally`, `/timeline`, `/migrations` · browser: `votes` G-Set + ledger replay |
 | Proposition merging and framing variants | `participation/propositions.py` · `/api/propositions/*`, `/api/topics/{id}/proposition` |
-| Finding snapshots | `participation/findings.py` · `/api/topics/{id}/findings`, `/api/findings/{id}[/markdown|/check]` |
+| Finding snapshots | `participation/findings.py` · `/api/topics/{id}/findings`, `/api/findings/{id}[/markdown|/check]` · browser: take / copy / check |
 
 ---
 
