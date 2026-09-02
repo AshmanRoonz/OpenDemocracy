@@ -8,7 +8,7 @@ deliberately differs.
 | Source | What it is | What Vote takes from it |
 |---|---|---|
 | [LiquidFeedback](https://liquidfeedback.com/en/) | The reference implementation of liquid democracy (transitive, revocable delegation) with a four-phase proposal process and preferential voting | Delegation design, a *frozen wording* phase, alternatives voted preferentially, and an argument about transparency Vote must answer |
-| [Polis](https://pol.is/) | Open-source (AGPL) opinion mapping: agree/disagree/pass on short statements, PCA + k-means opinion groups, group-informed consensus, no replies | The **bridge** mode of "AI connects voters", the common-ground metric, and the no-replies rule |
+| [Polis](https://pol.is/) | Open-source (AGPL) opinion mapping: agree/disagree/pass on short statements, PCA + k-means opinion groups, group-informed consensus, no replies | The `pass` stance and the no-replies rule. **Not** the groups: Vote counts individuals and never clusters people |
 | [Fung, Gilman & Shkabatur, *Six Models for the Internet + Politics* (2013)](https://academic.oup.com/isr/article/15/1/30/1792440) | Six models of how digital technology could change democracy, with a sober verdict on which are likely | A legitimacy strategy: why the MVP is scoped the way it is |
 | [tFHE Kotlin example](https://github.com/brooksdubois/tFHEKotlinExample) (Zama TFHE) | Demo of encrypted one-hot ballots tallied homomorphically and decrypted by threshold | A way to remove the operator from the trust chain of the tally — and a real tension with reproducibility |
 
@@ -78,14 +78,6 @@ and online alcohol sales; AGPL-licensed.
 
 **Suggestions for Vote.**
 
-- **This is the bridge mode.** [VOTE.md](VOTE.md) says AI should connect people
-  *across* disagreement and refuses to cluster people who agree. Polis is the
-  existence proof that you can compute groups and use them *only* to find what
-  crosses them. Concretely: treat opinions and ideas (already collectable) as
-  Polis statements with agree/disagree/**pass**; build the matrix; reuse the
-  existing `processing.clustering` to find groups; and report
-  **group-informed consensus** as a first-class field on a Finding. The README
-  has promised a "common ground" output since day one; this is the method.
 - **Add a `pass` stance.** Standing votes are currently choose-an-option or
   withdraw. "Pass" is different from "withdraw": it says *I saw this and have
   no view*, which is signal about where the public is uninformed. It also
@@ -94,17 +86,22 @@ and online alcohol sales; AGPL-licensed.
   attached to a vote change, not addressed to a person. That is the same
   choice Polis made for the same reason (no threads, no escalation). Write it
   down as a rule so a future "discussion" feature doesn't undo it.
-- **Comment routing is attention.** Polis decides what you see next to
-  maximise information about the group structure. Vote's attention module does
-  the same job with named reasons instead of an objective function. Keep the
-  named reasons; consider adding one — *"your view here would tell us the
-  most"* — computed transparently as "a statement your group hasn't voted on
-  enough".
+- **Common ground without groups.** Polis finds consensus by first sorting
+  people into opinion groups and then asking what every group agrees on. Vote
+  does not sort people. Common ground in Vote is counted directly over
+  individuals: a statement is common ground when a large share of *all*
+  standing voters agree with it and few pass. "Connecting voters across
+  disagreement" is likewise individual: show each person the reasons given by
+  individuals who voted differently, attached to their votes, never to a
+  segment.
 
-**The tension.** Polis clusters *people*. Vote's rule is that clustering must
-only ever be used to find what bridges groups, never to show a person their
-group or to route them to it. Enforce it in code: opinion groups are an
-internal intermediate that never leaves the aggregation step.
+**Where Vote refuses to follow.** Polis's core move is to cluster *people*.
+Vote's rule is stricter than "don't show people their group": **no groups at
+all.** Vote never clusters, segments, or models people into groups, not in
+the interface and not as an internal intermediate. Every number is a count of
+individuals. This costs Vote Polis's group-informed consensus metric; it buys
+the guarantee that the system can never learn, store, or act on who belongs
+with whom.
 
 ## 3. Fung, Gilman & Shkabatur — Six Models for the Internet + Politics
 
@@ -134,7 +131,7 @@ argue, take the paper as a route map:
   are the right answers; the paper says why they are necessary rather than
   nice.
 - **Constituent mobilisation is a warning, not a feature.** Mobilising people
-  who already agree is the model Vote refuses (no clustering of agreement).
+  who already agree is the model Vote refuses (no groups, no clustering).
   The paper shows it is also the model most easily captured by whoever runs the
   tool.
 
@@ -185,8 +182,8 @@ Cheap, in scope, and consistent with everything already built:
 
 Next, as their own pieces of work:
 
-5. **Bridge mode**: statement matrix → groups (internal only) → group-informed
-   consensus on Findings (Polis).
+5. **Common ground on Findings**, counted over individuals, no clustering
+   (Polis, minus the groups).
 6. **Delegation**: per-domain, transitive, revocable, beaten by a direct vote,
    with delegates transparent and citizens anonymous (LiquidFeedback).
 7. **Alternatives with preferential voting** inside a proposition
