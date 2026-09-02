@@ -7,7 +7,9 @@ class TestSimulate:
     def test_returns_projections(self) -> None:
         models = [
             DimensionModel(name="poverty_rate", base_effect=-0.08, confidence=0.6),
-            DimensionModel(name="inflation", base_effect=0.03, growth_curve="decay", confidence=0.4),
+            DimensionModel(
+                name="inflation", base_effect=0.03, growth_curve="decay", confidence=0.4
+            ),
         ]
         projections = simulate(models)
         assert len(projections) == 2
@@ -24,7 +26,9 @@ class TestSimulate:
         assert abs(p.long_term) > abs(p.short_term)
 
     def test_decay_shrinks_over_time(self) -> None:
-        models = [DimensionModel(name="x", base_effect=0.1, growth_curve="decay", rate=0.5)]
+        models = [
+            DimensionModel(name="x", base_effect=0.1, growth_curve="decay", rate=0.5)
+        ]
         projections = simulate(models)
         p = projections[0]
         assert abs(p.short_term) > abs(p.long_term)

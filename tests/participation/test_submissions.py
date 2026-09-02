@@ -185,19 +185,22 @@ class TestSubmissionStore:
         store = SubmissionStore(topics, reg)
 
         assert store.has_submitted(voter_id, "topic_1", SubmissionType.VOTE) is False
-        store.submit(
-            _ok_verification(voter_id), "topic_1", SubmissionType.VOTE, "Yes"
-        )
+        store.submit(_ok_verification(voter_id), "topic_1", SubmissionType.VOTE, "Yes")
         assert store.has_submitted(voter_id, "topic_1", SubmissionType.VOTE) is True
 
     def test_get_submissions_by_topic(self) -> None:
         reg = IdentityRegistry()
         for i in range(3):
-            reg.register(EnrollmentRecord(
-                anonymous_id=f"v{i}",
-                public_key=f"pk{i}",
-                factors_enrolled=[BiometricFactor.FINGERPRINT, BiometricFactor.FACE],
-            ))
+            reg.register(
+                EnrollmentRecord(
+                    anonymous_id=f"v{i}",
+                    public_key=f"pk{i}",
+                    factors_enrolled=[
+                        BiometricFactor.FINGERPRINT,
+                        BiometricFactor.FACE,
+                    ],
+                )
+            )
 
         topics = TopicStore()
         topics.create(_make_topic())

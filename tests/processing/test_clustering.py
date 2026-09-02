@@ -17,7 +17,12 @@ def _make_opinions_with_embeddings(n: int = 20) -> list[Opinion]:
             emb = [-0.8, 0.1, 0.3, 0.1]
             text = "I oppose this policy"
         op = Opinion(text=text, embedding=emb)
-        op.sentiment_scores = {"stance": emb[0], "urgency": emb[1], "certainty": emb[2], "intensity": emb[3]}
+        op.sentiment_scores = {
+            "stance": emb[0],
+            "urgency": emb[1],
+            "certainty": emb[2],
+            "intensity": emb[3],
+        }
         opinions.append(op)
     return opinions
 

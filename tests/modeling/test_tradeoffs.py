@@ -7,8 +7,15 @@ from opendemocracy.modeling.tradeoffs import find_tradeoffs
 class TestFindTradeoffs:
     def test_finds_opposing_directions(self) -> None:
         projections = [
-            ImpactProjection(dimension="poverty", short_term=-0.05, medium_term=-0.08, long_term=-0.10),
-            ImpactProjection(dimension="inflation", short_term=0.03, medium_term=0.04, long_term=0.05),
+            ImpactProjection(
+                dimension="poverty",
+                short_term=-0.05,
+                medium_term=-0.08,
+                long_term=-0.10,
+            ),
+            ImpactProjection(
+                dimension="inflation", short_term=0.03, medium_term=0.04, long_term=0.05
+            ),
         ]
         tradeoffs = find_tradeoffs(projections)
         assert len(tradeoffs) == 1

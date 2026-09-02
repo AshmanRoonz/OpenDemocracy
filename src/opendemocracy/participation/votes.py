@@ -174,9 +174,17 @@ class StandingVoteLedger:
         return self._current.get((topic_id, anonymous_voter_id))
 
     def history(
-        self, topic_id: str, anonymous_voter_id: str | None = None
+        self,
+        topic_id: str,
+        anonymous_voter_id: str | None = None,
+        at: datetime | None = None,
     ) -> list[VoteEvent]:
-        """Ledger entries for a topic, oldest first, optionally for one voter."""
+        """Ledger entries for a topic, oldest first, optionally for one voter.
+
+        ``at`` bounds the history to events up to that moment, so anything
+        derived from it can be reproduced exactly later.
+        """
+        cutoff = _aware(at) if at is not None else None
         return [
             e
             for e in self._events
@@ -184,6 +192,7 @@ class StandingVoteLedger:
             and (
                 anonymous_voter_id is None or e.anonymous_voter_id == anonymous_voter_id
             )
+            and (cutoff is None or _aware(e.at) <= cutoff)
         ]
 
     def participant_count(self, topic_id: str) -> int:
@@ -224,14 +233,15 @@ class StandingVoteLedger:
         """The living curve: one tally after every ledger event on the topic."""
         return [self.tally(topic_id, at=e.at) for e in self.history(topic_id)]
 
-    def migrations(self, topic_id: str) -> list[Migration]:
+    def migrations(self, topic_id: str, at: datetime | None = None) -> list[Migration]:
         """Who moved where, and why — argument efficacy as vote migration.
 
         Ordered by how many people made each move, largest first, with ties in
-        stable ledger order so results are reproducible.
+        stable ledger order so results are reproducible. ``at`` bounds the
+        ledger to that moment.
         """
         buckets: dict[tuple[str | None, str | None], Migration] = {}
-        for e in self.history(topic_id):
+        for e in self.history(topic_id, at=at):
             if e.previous is None:
                 continue  # a first cast is not a migration
             m = buckets.setdefault(

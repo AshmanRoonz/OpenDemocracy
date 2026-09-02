@@ -6,9 +6,10 @@ Run with:  uvicorn opendemocracy.web.app:app --reload
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -23,6 +24,7 @@ from opendemocracy.models import (
     Topic,
 )
 from opendemocracy.participation.attention import AGENDA_PROMPT, what_needs_attention
+from opendemocracy.participation.findings import FindingStore
 from opendemocracy.participation.propositions import PropositionRegistry, suggest_merges
 from opendemocracy.participation.relevance import Interests
 from opendemocracy.participation.submissions import SubmissionStore
@@ -44,6 +46,7 @@ topic_store = TopicStore()
 submission_store = SubmissionStore(topic_store, registry)
 vote_ledger = StandingVoteLedger(topic_store, registry)
 propositions = PropositionRegistry(topic_store, vote_ledger)
+findings = FindingStore(topic_store, vote_ledger, propositions)
 
 # Challenge cache: challenge_id → AuthChallenge
 _challenges: dict[str, object] = {}
@@ -218,6 +221,17 @@ class PropositionOut(BaseModel):
     divergence: float
     divergence_option: str | None
     framing_matters: bool
+
+
+class FindingRequest(BaseModel):
+    note: str | None = None
+    anonymous_id: str | None = None
+
+
+class FindingCheckOut(BaseModel):
+    finding_id: str
+    verified: bool  # content still matches its hash
+    reproduced: bool  # the ledger re-derives it exactly
 
 
 class TopicCreateRequest(BaseModel):
@@ -559,6 +573,58 @@ def api_topic_proposition(topic_id: str) -> PropositionOut:
         divergence=view.divergence,
         divergence_option=view.divergence_option,
         framing_matters=view.framing_matters,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Findings (citable snapshots)
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/topics/{topic_id}/findings")
+def api_take_finding(topic_id: str, req: FindingRequest) -> dict[str, Any]:
+    """Freeze the issue as it stands: a hashed, reproducible record."""
+    try:
+        f = findings.take(topic_id, note=req.note, taken_by=req.anonymous_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return f.to_dict()
+
+
+@app.get("/api/topics/{topic_id}/findings")
+def api_list_findings(topic_id: str) -> list[dict[str, Any]]:
+    if topic_store.get(topic_id) is None:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return [f.to_dict() for f in findings.list_for(topic_id)]
+
+
+@app.get("/api/findings/{finding_id}")
+def api_get_finding(finding_id: str) -> dict[str, Any]:
+    f = findings.get(finding_id)
+    if f is None:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    return f.to_dict()
+
+
+@app.get("/api/findings/{finding_id}/markdown", response_class=PlainTextResponse)
+def api_finding_markdown(finding_id: str) -> str:
+    """The one-page record for an agenda."""
+    f = findings.get(finding_id)
+    if f is None:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    return f.to_markdown()
+
+
+@app.post("/api/findings/{finding_id}/check", response_model=FindingCheckOut)
+def api_check_finding(finding_id: str) -> FindingCheckOut:
+    """Anyone can ask: is this finding intact, and does the ledger still produce it?"""
+    f = findings.get(finding_id)
+    if f is None:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    return FindingCheckOut(
+        finding_id=finding_id,
+        verified=findings.verify(f),
+        reproduced=findings.reproduce(f),
     )
 
 

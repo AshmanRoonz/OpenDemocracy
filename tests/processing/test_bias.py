@@ -4,7 +4,9 @@ from opendemocracy.models import Demographics, Opinion, SourcePlatform
 from opendemocracy.processing.bias import detect_bias
 
 
-def _make_opinions(n: int, source: SourcePlatform = SourcePlatform.REDDIT) -> list[Opinion]:
+def _make_opinions(
+    n: int, source: SourcePlatform = SourcePlatform.REDDIT
+) -> list[Opinion]:
     return [
         Opinion(
             text=f"Opinion number {i} about universal basic income policy discussion",
@@ -31,7 +33,9 @@ class TestDetectBias:
             opinions.append(
                 Opinion(
                     text=f"Unique opinion {i} about policy that is different from others",
-                    source=SourcePlatform.REDDIT if i % 2 == 0 else SourcePlatform.TWITTER,
+                    source=SourcePlatform.REDDIT
+                    if i % 2 == 0
+                    else SourcePlatform.TWITTER,
                     demographics=Demographics(age_range="25-34", region="US-West"),
                 )
             )

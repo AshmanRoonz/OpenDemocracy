@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac as hmac_mod
+import json
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -15,6 +16,7 @@ from opendemocracy.web.app import (
     topic_store,
     vote_ledger,
 )
+from opendemocracy.web.app import findings as finding_store
 from opendemocracy.web.app import propositions as proposition_registry
 
 
@@ -28,6 +30,7 @@ def _reset_state() -> None:  # type: ignore[misc]
     vote_ledger._events.clear()
     vote_ledger._current.clear()
     proposition_registry.history.clear()
+    finding_store._findings.clear()
     for t in list(topic_store._topics.values()):
         if t.id != "demo-ubi":
             del topic_store._topics[t.id]
@@ -416,3 +419,43 @@ async def test_propositions_suggest_merge_and_view(client: AsyncClient) -> None:
         "/api/propositions/merge", json={"topic_ids": ["ban", "demo-ubi"]}
     )
     assert res.status_code == 400
+
+
+@pytest.mark.anyio()
+async def test_findings_take_export_and_check(client: AsyncClient) -> None:
+    from opendemocracy.models import Topic
+
+    topic_store.create(
+        Topic(id="rent", title="Rent cap", quorum=2, vote_options=["Yes", "No"])
+    )
+    alice = await _enrolled(client)
+    bob = await _enrolled(client)
+    await _vote(client, alice, "Yes", topic_id="rent")
+    await _vote(client, bob, "No", topic_id="rent")
+    await _vote(client, bob, "Yes", reason="the numbers", topic_id="rent")
+
+    res = await client.post("/api/topics/rent/findings", json={"note": "Council, Sept"})
+    assert res.status_code == 200
+    f = res.json()
+    assert f["rung"] == "quorum" and f["citable"] is True
+    assert f["tally"]["counts"] == {"Yes": 2, "No": 0}
+    assert f["migrations"][0]["reasons"] == ["the numbers"]
+    assert alice["anonymous_id"] not in json.dumps(f)
+
+    md = (await client.get(f"/api/findings/{f['finding_id']}/markdown")).text
+    assert md.startswith("# Finding: Rent cap")
+    assert f["content_hash"] in md
+
+    # The world moves on; the finding still checks out.
+    await _vote(client, alice, "No", topic_id="rent")
+    check = (await client.post(f"/api/findings/{f['finding_id']}/check")).json()
+    assert check == {
+        "finding_id": f["finding_id"],
+        "verified": True,
+        "reproduced": True,
+    }
+
+    listed = (await client.get("/api/topics/rent/findings")).json()
+    assert [x["finding_id"] for x in listed] == [f["finding_id"]]
+    assert (await client.get("/api/findings/nope")).status_code == 404
+    assert (await client.post("/api/topics/nope/findings", json={})).status_code == 404

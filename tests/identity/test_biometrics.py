@@ -74,16 +74,16 @@ class TestValidateFactorSet:
         assert "At least" in problems[0]
 
     def test_duplicate_factors(self) -> None:
-        problems = validate_factor_set(
-            [BiometricFactor.FACE, BiometricFactor.FACE]
-        )
+        problems = validate_factor_set([BiometricFactor.FACE, BiometricFactor.FACE])
         assert any("Duplicate" in p for p in problems)
 
     def test_four_factors_valid(self) -> None:
-        problems = validate_factor_set([
-            BiometricFactor.FINGERPRINT,
-            BiometricFactor.FACE,
-            BiometricFactor.IRIS,
-            BiometricFactor.VOICE,
-        ])
+        problems = validate_factor_set(
+            [
+                BiometricFactor.FINGERPRINT,
+                BiometricFactor.FACE,
+                BiometricFactor.IRIS,
+                BiometricFactor.VOICE,
+            ]
+        )
         assert problems == []

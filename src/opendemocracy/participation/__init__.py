@@ -20,6 +20,10 @@ votes) hands over to choice, with every claim on attention naming its reason.
 The :mod:`~opendemocracy.participation.propositions` module merges duplicate
 questions into one proposition while keeping every wording visible, so the
 signal doesn't fragment and framing effects are shown rather than hidden.
+
+The :mod:`~opendemocracy.participation.findings` module freezes an issue into
+a *Finding*: a hashed, reproducible, exportable snapshot — the citable record
+at the top of the legitimacy ladder.
 """
 
 from opendemocracy.participation.attention import (
@@ -27,6 +31,12 @@ from opendemocracy.participation.attention import (
     AttentionItem,
     AttentionReason,
     what_needs_attention,
+)
+from opendemocracy.participation.findings import (
+    Finding,
+    FindingStore,
+    LadderRung,
+    ladder_rung,
 )
 from opendemocracy.participation.propositions import (
     MergeSuggestion,
@@ -65,7 +75,10 @@ __all__ = [
     "AGENDA_PROMPT",
     "AttentionItem",
     "AttentionReason",
+    "Finding",
+    "FindingStore",
     "Interests",
+    "LadderRung",
     "MergeSuggestion",
     "Migration",
     "PropositionRegistry",
@@ -80,6 +93,7 @@ __all__ = [
     "composite_score",
     "compute_status",
     "is_closed",
+    "ladder_rung",
     "matches_interests",
     "quorum_fraction",
     "rank_topics",
