@@ -126,6 +126,10 @@ Prioritizes raw signal over curated narratives. Designed to resist capture by an
 - [x] **What needs attention?** — the point where automatic flow hands over
   to choice, every claim on attention naming its reason; plus the agenda
   prompt asked back of the citizen. See [VOTE.md](VOTE.md).
+- [x] **Nostr-carried record:** the browser app stores and syncs every
+  record as a signed Nostr event through public relays — no server you have
+  to trust, no single one you depend on, every browser verifies everything,
+  and the record outlives every open tab. See [VOTE.md](VOTE.md).
 - [x] **Propositions with visible framing variants:** duplicate wordings are
   suggested transparently and merged by a human; every wording keeps its own
   tally, the combined tally counts people once, and how far the wordings
@@ -207,6 +211,7 @@ See [PRIOR_ART.md](PRIOR_ART.md) for what Vote takes from each of these, and whe
 - [LiquidFeedback](https://liquidfeedback.com/en/) — Liquid democracy: transitive, revocable delegation and a phased proposal process
 - [Fung, Gilman & Shkabatur, *Six Models for the Internet + Politics*](https://academic.oup.com/isr/article/15/1/30/1792440) — Which digital-democracy models actually arrive
 - [Zama TFHE](https://github.com/brooksdubois/tFHEKotlinExample) — Homomorphic tallying: counting votes the server cannot read
+- [Nostr](https://github.com/nostr-protocol/nostr) — Signed events on interchangeable relays: how the browser app carries its record with no server you have to trust
 - [Trystero](https://github.com/dmotz/trystero) and [Rakis](https://github.com/hrishioa/rakis) — Serverless WebRTC signaling, and verified in-browser inference on top of it
 - [Decidim](https://decidim.org/) — Participatory democracy platform
 - [vTaiwan](https://info.vtaiwan.tw/) — Taiwan's digital democracy experiment

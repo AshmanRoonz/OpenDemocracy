@@ -52,7 +52,7 @@ nests with their own in either direction.
 This logic lives in exactly one place per runtime, kept in lockstep:
 
 - **Backend:** [`src/opendemocracy/participation/relevance.py`](src/opendemocracy/participation/relevance.py)
-- **In-browser P2P app:** the *frequent-democracy relevance engine* block in
+- **In-browser app:** the *frequent-democracy relevance engine* block in
   [`docs/index.html`](docs/index.html)
 
 Both produce identical orderings for identical inputs (covered by
@@ -72,7 +72,7 @@ under node against the Python modules.
    card shows why it surfaced: a ⭐ "for you" pill, a ⏱ countdown when a
    deadline is near, an activity marker, and matched tags highlighted.
 3. **Invited in when it matters.** When a new issue that matches your declared
-   interests appears on the mesh, a quiet "a new issue matters to you" banner
+   interests arrives from the relays, a quiet "a new issue matters to you" banner
    appears — the digital equivalent of being personally invited to the meeting
    that affects you. Backlog from initial sync never triggers alerts; only
    genuinely new issues do.
@@ -96,7 +96,7 @@ under node against the Python modules.
 ## Roadmap
 
 ### Now (shipped)
-- [x] Relevance / urgency / activity ranking, shared by backend and P2P app
+- [x] Relevance / urgency / activity ranking, shared by backend and browser app
 - [x] Per-citizen "live issues" feed with for-you / closing-soon / active /
       newest sorting
 - [x] Local-only interest tags + region
@@ -123,13 +123,13 @@ under node against the Python modules.
 
 ### Later
 - [ ] Cross-jurisdiction issue routing (an issue raised locally that turns out
-      to matter regionally surfaces to the wider mesh)
+      to matter regionally surfaces more widely)
 - [ ] Accessibility parity for offline / assembly formats — representing the
       unconnected is an explicit goal, not an afterthought
 
 ## Why this is the right increment
 
-Everything else in OpenDemocracy — verified identity, the P2P mesh, the local
+Everything else in OpenDemocracy — verified identity, the relay-carried record, the local
 collective-intelligence engine — answers *"can every voice be heard, safely and
 without a gatekeeper?"* Frequent Democracy answers the question the manifesto
 actually leads with: *"will every voice be heard **when it matters to that

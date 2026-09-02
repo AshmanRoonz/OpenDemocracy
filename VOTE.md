@@ -148,10 +148,17 @@ been heard and answered.
 
 ## How this maps to the codebase
 
-The in-browser peer-to-peer app ([`docs/index.html`](docs/index.html)) mirrors
-the standing-vote ledger, the attention reasons it can compute without a
+The in-browser app ([`docs/index.html`](docs/index.html)) mirrors the
+standing-vote ledger, the attention reasons it can compute without a
 preference profile, and the Finding payload and hash, as a pure *VOTE ENGINE*
-block. `tests/participation/test_browser_parity.py` runs that block under node
+block. Its transport is **Nostr**: every record — enrollment, question,
+opinion, standing vote — is a signed Nostr event, and public relays carry
+them as dumb replicated storage. There is no server you have to trust and no
+single one you depend on: the page reads from several relays, anyone can add
+one, a community can run its own, and every browser verifies every signature
+and replays the ledger itself. The record outlives every open tab. The pure
+*NOSTR MAPPING* block (events ⇄ records, validation, dependency parking) is
+exercised by `tests/participation/test_browser_nostr.py`. `tests/participation/test_browser_parity.py` runs that block under node
 against the Python modules: same events, same tally, same migrations, same
 canonical JSON, same SHA-256.
 

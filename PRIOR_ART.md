@@ -11,7 +11,7 @@ deliberately differs.
 | [Polis](https://pol.is/) | Open-source (AGPL) opinion mapping: agree/disagree/pass on short statements, PCA + k-means opinion groups, group-informed consensus, no replies | The `pass` stance and the no-replies rule. **Not** the groups: Vote counts individuals and never clusters people |
 | [Fung, Gilman & Shkabatur, *Six Models for the Internet + Politics* (2013)](https://academic.oup.com/isr/article/15/1/30/1792440) | Six models of how digital technology could change democracy, with a sober verdict on which are likely | A legitimacy strategy: why the MVP is scoped the way it is |
 | [tFHE Kotlin example](https://github.com/brooksdubois/tFHEKotlinExample) (Zama TFHE) | Demo of encrypted one-hot ballots tallied homomorphically and decrypted by threshold | A way to remove the operator from the trust chain of the tally — and a real tension with reproducibility |
-| [Trystero](https://github.com/dmotz/trystero) and [Rakis](https://github.com/hrishioa/rakis) | Serverless WebRTC signaling (BitTorrent, Nostr, MQTT, IPFS); and a browser-only inference network on top of it with embedding-based verification | Removing the mesh's last central point; and the only place Vote's AI "explain" and "organize" jobs can honestly run — with verification, so an AI sentence is auditable the way a tally is |
+| [Trystero](https://github.com/dmotz/trystero) and [Rakis](https://github.com/hrishioa/rakis) | Serverless WebRTC signaling (BitTorrent, Nostr, MQTT, IPFS); and a browser-only inference network on top of it with embedding-based verification | The move that became "Nostr relays carry the ledger" (built); and the only place Vote's AI "explain" and "organize" jobs can honestly run — with verification, so an AI sentence is auditable the way a tally is |
 
 ---
 
@@ -187,12 +187,19 @@ trusted hardware.
 
 **Suggestions for Vote.**
 
-- **Swap PeerJS signaling for Trystero.** The browser app is "no server"
-  everywhere except peer introduction, which today goes through PeerJS's
-  hosted signaling server — the last thing in the mesh that can be switched
-  off or made to log who talks to whom. Vote's sync protocol (digest, request,
-  sync, and the `votes` G-Set) is transport-agnostic, so this is a contained
-  change with a large trust payoff.
+- **Done — and one step further: Nostr relays carry the ledger itself.** The
+  browser app used PeerJS, whose hosted signaling server was the last thing
+  in the mesh that could be switched off or made to log who talks to whom.
+  Rather than swap signaling and keep a WebRTC full mesh, the app now makes
+  every record a signed Nostr event and uses relays as dumb replicated
+  storage: the ledger outlives every open tab, phones need no STUN or TURN,
+  and the per-topic ceiling is thousands rather than dozens. The claim
+  changes from "no server" to "no server you have to trust, and no single one
+  you depend on" — the page reads from several relays, anyone can add one,
+  and a community can run its own. Every browser still verifies every
+  signature and replays the ledger; relays only carry. Trystero's Nostr
+  strategy remains the natural route if a direct WebRTC path is ever wanted
+  as an accelerator on top.
 - **Vote's AI has to live where the ledger lives.** [VOTE.md](VOTE.md) gives
   the AI three jobs — connect, organize, explain — and forbids it from
   producing a number or casting a vote. Two of those jobs (semantic
@@ -225,7 +232,7 @@ Cheap, in scope, and consistent with everything already built:
 2. **Add `pass`** as a stance distinct from withdraw (Polis).
 3. **Write the no-replies rule into VOTE.md** (Polis).
 4. **Admission quorum** before a topic enters others' attention (LiquidFeedback).
-5. **Trystero for signaling** — remove the mesh's last central point (Trystero).
+5. ~~Trystero for signaling~~ **Done as Nostr-carried ledger** — the browser app now stores and syncs every record as a signed Nostr event through relays; no signaling server, no WebRTC mesh (see [VOTE.md](VOTE.md)).
 
 Next, as their own pieces of work:
 
