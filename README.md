@@ -38,6 +38,18 @@ It surfaces, in real time:
 
 No top-down imposition. Just honest revelation of our shared reality.
 
+## Vote — The App
+
+**Anyone can vote for anything, at any time.** AI connects voters, organizes our concerns, and makes sure every voice matters. **Vote** is OpenDemocracy's citizen-facing app — the place these principles become something you can open and use.
+
+- **You set the agenda.** The distortion of democracy happens upstream of the count — in who chooses the questions, how they're worded, and who narrates the result afterward. Vote gives the questions back to the people.
+- **Votes are standing, not final.** Change your mind anytime. Opinion becomes a living curve, and arguments are measured by who they actually moved.
+- **Every voice is credible signal.** Verified humans, anonymous identity, deterministic tallies, and the denominator always shown.
+- **Every voice matters — including the ones that lost.** Full distributions, intensity beside headcount, dissent as a first-class output.
+- **AI connects and organizes; humans decide.** The AI never produces a number and never casts a vote.
+
+Read the founding document: **[VOTE.md](VOTE.md)**. The first release is one community, one real decision.
+
 ## Core Principles
 
 ### 1. Fully Open-Source
@@ -105,6 +117,10 @@ Prioritizes raw signal over curated narratives. Designed to resist capture by an
 - [x] **Frequent Democracy:** per-citizen *live issues* feed that surfaces
   issues by relevance, urgency, and activity — hearing every voice *when it
   matters to that voice*. See [FREQUENT_DEMOCRACY.md](FREQUENT_DEMOCRACY.md).
+- [x] **AI mediation with human authority:** citizen-owned preference profiles
+  that suggest, never decide. See [AI_MEDIATION.md](AI_MEDIATION.md).
+- [ ] **Vote MVP:** one community, one real decision — standing revocable
+  votes, proposition merging, exportable findings. See [VOTE.md](VOTE.md).
 
 ### Phase 3: Deliberative Integration
 - [ ] Partner with [Polis](https://pol.is/)-style deliberative tools
@@ -152,7 +168,10 @@ cat CONTRIBUTING.md
 ## Frequently Asked Questions
 
 **Isn't this just another poll?**
-No. Polls collapse nuance into yes/no. OpenDemocracy preserves the full distribution of views, surfaces *why* people hold their positions, identifies common ground across opposing camps, and models downstream consequences.
+No. Polls collapse nuance into yes/no and are consumed by someone else. OpenDemocracy preserves the full distribution of views, surfaces *why* people hold their positions, identifies common ground across opposing camps, and models downstream consequences. In [Vote](VOTE.md), the people set the questions, votes are standing and revocable, and results are auditable findings the people who produced them can cite.
+
+**Isn't "everyone votes on everything, daily" just majority rule at speed?**
+That's exactly the failure mode Vote is built against. Minority views stay visible as data, intensity is shown next to headcount, and the AI that organizes the conversation never produces a number or casts a vote. See [VOTE.md](VOTE.md) and [AI_MEDIATION.md](AI_MEDIATION.md).
 
 **Won't bad actors game the system?**
 This is a real threat and a core design challenge. Defenses include verified-human checks, anomaly detection, Sybil resistance, transparent methodology (so gaming attempts are visible), and community auditing. No system is immune—but open systems are harder to capture than closed ones.
